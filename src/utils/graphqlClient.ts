@@ -123,12 +123,11 @@ export class GraphQLClient {
  */
 export async function createGraphQLClient(): Promise<GraphQLClient> {
 	const config = loadConfig();
-	const headers: Record<string, string> = {};
-	if (config.cookie) {
-		headers.Cookie = config.cookie;
-	}
+	const apiToken = config.apiToken;
 
-	const gql = new GraphQLClient(`${config.baseUrl}/graphql`, headers, config.apiToken);
+	const headers: Record<string, string> = {};
+
+	const gql = new GraphQLClient(`${config.baseUrl}/graphql`, headers, apiToken);
 
 	if (!gql.isAuthenticated()) {
 		throw new Error(

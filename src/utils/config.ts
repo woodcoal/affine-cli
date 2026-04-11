@@ -254,3 +254,18 @@ export function getWorkspaceId(paramsWorkspaceId?: string): string {
 	}
 	return workspaceId;
 }
+
+/**
+ * 获取 API 配置
+ *
+ * @param paramsWorkspaceId - 可选的工作区 ID 参数
+ * @returns API 配置对象，包含 apiUrl、apiToken、workspaceId
+ */
+export function getApiConfig() {
+	const config = loadConfig();
+
+	return {
+		apiUrl: `${config.baseUrl}/graphql`,
+		apiToken: config.apiToken
+	};
+}
