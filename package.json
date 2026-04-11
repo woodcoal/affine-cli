@@ -1,0 +1,60 @@
+{
+	"name": "affine-cli",
+	"version": "1.26.411",
+	"description": "Affine CLI is a lightweight command-line tool for managing Affine documents, tags, folders, collections, files, comments, and databases. ",
+	"author": "木炭 <woodcoal@qq.com>",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/woodcoal/affine-cli.git"
+	},
+	"bugs": {
+		"url": "https://github.com/woodcoal/affine-cli/issues"
+	},
+	"homepage": "https://github.com/woodcoal/affine-cli#readme",
+	"keywords": [
+		"affine",
+		"affine-cli",
+		"cli",
+		"ai-agent",
+		"document-management",
+		"skill"
+	],
+	"main": "dist/index.js",
+	"bin": {
+		"affine-cli": "bin/affine-cli"
+	},
+	"type": "module",
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"files": [
+		"bin",
+		"dist",
+		"README.md",
+		"README-en.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"clean": "node -e \"require('fs').rmSync('dist',{ recursive: true, force: true })\"",
+		"build": "npm run clean && tsc -p tsconfig.json",
+		"start": "node dist/index.js",
+		"dev": "tsc --watch"
+	},
+	"dependencies": {
+		"@types/form-data": "^2.5.2",
+		"form-data": "^4.0.5",
+		"fractional-indexing": "^3.2.0",
+		"markdown-it": "^14.1.1",
+		"nanoid": "^5.1.7",
+		"node-fetch": "^3.3.2",
+		"socket.io-client": "^4.8.3",
+		"undici": "^8.0.2",
+		"yjs": "^13.6.30"
+	},
+	"devDependencies": {
+		"@types/markdown-it": "^14.1.2",
+		"@types/node": "^25.6.0",
+		"typescript": "^6.0.2"
+	}
+}

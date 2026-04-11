@@ -1,0 +1,458 @@
+/**
+ * 文档 CLI 模块
+ * 提供文档管理的命令行接口，包括列表、详情、创建、删除、复制、更新、搜索、替换、追加等功能
+ */
+
+import { CommandConfig, generateCommandMap } from '../utils/cliUtils.js';
+import { convertToMarkdown } from '../utils/fileConverter.js';
+
+import {
+	docListHandler,
+	docInfoHandler,
+	docCreateHandler,
+	docDeleteHandler,
+	docCopyHandler,
+	docUpdateHandler,
+	docSearchHandler,
+	docReplaceHandler,
+	docAppendHandler
+} from '../core/docs.js';
+
+/**
+ * 解析内容参数
+ * 支持 --content 直接输入或 --file 读取文件
+ *
+ * @param contentValue - --content 参数值
+ * @param fileValue - --file 参数值
+ * @returns 解析后的内容字符串
+ */
+function parseContentParam(contentValue?: string, fileValue?: string): string {
+	if (fileValue) {
+		return convertToMarkdown(fileValue);
+	}
+	return contentValue || '';
+}
+
+/**
+ * 文档命令配置
+ * 定义所有文档相关命令的参数和处理器映射
+ */
+const docCommands: Record<string, CommandConfig> = {
+	/**
+	 * list 命令：列出工作区文档
+	 * 用法：list [--count <n>] [--skip <n>] [--after <cursor>] [--workspace <workspace-id>]
+	 */
+	list: {
+		name: 'list',
+		description: '列出工作区文档（支持分页）',
+		usage: 'list [--count <n>] [--skip <n>] [--after <cursor>] [--workspace <workspace-id>]',
+		args: [
+			{
+				name: 'count',
+				short: 'no',
+				description: '每页返回数量（默认 50）',
+				type: 'number'
+			},
+			{
+				name: 'skip',
+				description: '偏移量（用于跳过前面的文档）',
+				type: 'number'
+			},
+			{
+				name: 'after',
+				description: '游标值（用于分页，获取下一页）',
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			}
+		],
+		handler: docListHandler,
+		paramsMapper: (parsed) => ({
+			count: parsed.count,
+			skip: parsed.skip,
+			after: parsed.after,
+			workspace: parsed.workspace
+		})
+	},
+
+	/**
+	 * info 命令：获取文档详情
+	 * 用法：info --id <doc-id> [--workspace <workspace-id>] [--content <mode>]
+	 */
+	info: {
+		name: 'info',
+		description: '获取指定文档的详细信息（包含内容与元数据）',
+		usage: 'info --id <doc-id> [--workspace <workspace-id>] [--content <mode>]',
+		args: [
+			{
+				name: 'id',
+				description: '文档 ID',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			},
+			{
+				name: 'content',
+				short: 'c',
+				description: '内容输出模式：markdown(默认)/raw/hidden',
+				type: 'string'
+			}
+		],
+		handler: docInfoHandler,
+		paramsMapper: (parsed) => ({
+			id: parsed.id,
+			workspace: parsed.workspace,
+			content: parsed.content || 'markdown'
+		})
+	},
+
+	/**
+	 * create 命令：创建文档
+	 * 用法：create [--title <title>] [--content <markdown>] [--file <path>] [--folder <folder-id>] [--tags <tag1,tag2>] [--workspace <workspace-id>]
+	 */
+	create: {
+		name: 'create',
+		description: '创建新文档（支持从 Markdown 文件导入）',
+		usage: 'create [--title <title>] [--content <markdown>] [--file <path>] [--folder <folder-id>] [--tags <tag1,tag2>] [--workspace <workspace-id>]',
+		args: [
+			{
+				name: 'title',
+				short: 't',
+				description: '文档标题（必填）',
+				type: 'string'
+			},
+			{
+				name: 'content',
+				short: 'c',
+				description: '文档内容（Markdown 格式）',
+				type: 'string'
+			},
+			{
+				name: 'file',
+				short: 'p',
+				description: '从文件读取 Markdown 内容（优先级高于 --content）',
+				type: 'string'
+			},
+			{
+				name: 'folder',
+				short: 'f',
+				description: '文档所在文件夹 ID（可选）',
+				type: 'string'
+			},
+			{
+				name: 'tags',
+				description: '标签列表（逗号分隔，如 "tag1,tag2"）',
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			}
+		],
+		handler: docCreateHandler,
+		paramsMapper: (parsed) => ({
+			title: parsed.title,
+			content: parseContentParam(parsed.content, parsed.file),
+			folder: parsed.folder,
+			tags: parsed.tags,
+			workspace: parsed.workspace
+		})
+	},
+
+	/**
+	 * search 命令：文档搜索
+	 * 用法：search [--query <keyword>] [--workspace <workspace-id>] [--count <n>] [--match-mode <mode>] [--tag <tag>]
+	 */
+	search: {
+		name: 'search',
+		description: '在文档中搜索关键词（支持标签过滤）',
+		usage: 'search [--query <keyword>] [--workspace <workspace-id>] [--count <n>] [--match-mode <mode>] [--tag <tag>]',
+		args: [
+			{
+				name: 'query',
+				short: 'q',
+				description: '搜索关键词（可与 --tag 组合使用）',
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			},
+			{
+				name: 'count',
+				short: 'no',
+				description: '返回结果数量（默认 20）',
+				type: 'number'
+			},
+			{
+				name: 'match-mode',
+				short: 'm',
+				description: '匹配模式：substring(包含)/prefix(前缀)/suffix(后缀)/exact(完全)',
+				default: 'substring',
+				type: 'string'
+			},
+			{
+				name: 'tag',
+				description: '按标签过滤（可与 --query 组合）',
+				type: 'string'
+			}
+		],
+		handler: docSearchHandler,
+		paramsMapper: (parsed) => ({
+			query: parsed.query,
+			workspace: parsed.workspace,
+			count: parsed.count,
+			matchMode: parsed['match-mode'],
+			tag: parsed.tag
+		})
+	},
+
+	/**
+	 * delete 命令：删除文档
+	 * 用法：delete --id <doc-id> [--workspace <workspace-id>]
+	 */
+	delete: {
+		name: 'delete',
+		description: '删除指定的文档',
+		usage: 'delete --id <doc-id> [--workspace <workspace-id>]',
+		args: [
+			{
+				name: 'id',
+				description: '要删除的文档 ID',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			}
+		],
+		handler: docDeleteHandler,
+		paramsMapper: (parsed) => ({
+			id: parsed.id,
+			workspace: parsed.workspace
+		})
+	},
+
+	/**
+	 * copy 命令：复制文档
+	 * 用法：copy --id <doc-id> [--title <title>] [--parent <parent-id>] [--folder <folder-id>] [--workspace <workspace-id>]
+	 */
+	copy: {
+		name: 'copy',
+		description: '复制现有文档为新文档',
+		usage: 'copy --id <doc-id> [--title <title>] [--parent <parent-id>] [--folder <folder-id>] [--workspace <workspace-id>]',
+		args: [
+			{
+				name: 'id',
+				description: '源文档 ID',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'title',
+				short: 't',
+				description: '新文档的标题（不指定则使用原标题）',
+				type: 'string'
+			},
+			{
+				name: 'parent',
+				short: 'p',
+				description: '父文档 ID（创建为子文档）',
+				type: 'string'
+			},
+			{
+				name: 'folder',
+				short: 'f',
+				description: '目标文件夹 ID',
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			}
+		],
+		handler: docCopyHandler,
+		paramsMapper: (parsed) => ({
+			id: parsed.id,
+			title: parsed.title,
+			parent: parsed.parent,
+			folder: parsed.folder,
+			workspace: parsed.workspace
+		})
+	},
+
+	/**
+	 * update 命令：更新文档属性
+	 * 用法：update --id <doc-id> [--title <title>] [--parent <parent-id>] [--folder <folder-id>] [--workspace <workspace-id>]
+	 */
+	update: {
+		name: 'update',
+		description: '更新文档属性（标题、父子关系、文件夹）',
+		usage: 'update --id <doc-id> [--title <title>] [--parent <parent-id>] [--folder <folder-id>] [--workspace <workspace-id>]',
+		args: [
+			{
+				name: 'id',
+				description: '要更新的文档 ID',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'title',
+				short: 't',
+				description: '新的文档标题',
+				type: 'string'
+			},
+			{
+				name: 'parent',
+				short: 'p',
+				description: '新的父文档 ID（可移除父子关系）',
+				type: 'string'
+			},
+			{
+				name: 'folder',
+				short: 'f',
+				description: '文档新的目标文件夹',
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			}
+		],
+		handler: docUpdateHandler,
+		paramsMapper: (parsed) => ({
+			id: parsed.id,
+			title: parsed.title,
+			parent: parsed.parent,
+			folder: parsed.folder,
+			workspace: parsed.workspace
+		})
+	},
+
+	/**
+	 * replace 命令：替换文档内容
+	 * 用法：replace --id <doc-id> --search <text> --replace <text> [--workspace <workspace-id>] [--match-all] [--preview]
+	 */
+	replace: {
+		name: 'replace',
+		description: '替换文档中的指定文本',
+		usage: 'replace --id <doc-id> --search <text> --replace <text> [--workspace <workspace-id>] [--match-all] [--preview]',
+		args: [
+			{
+				name: 'id',
+				description: '文档 ID',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'search',
+				short: 's',
+				description: '要搜索替换的文本',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'replace',
+				short: 'r',
+				description: '替换后的文本',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			},
+			{
+				name: 'match-all',
+				short: 'a',
+				description: '替换所有匹配项（默认 true）',
+				type: 'boolean'
+			},
+			{
+				name: 'preview',
+				short: 'p',
+				description: '预览模式（仅显示替换结果，不实际修改）',
+				type: 'boolean'
+			}
+		],
+		handler: docReplaceHandler,
+		paramsMapper: (parsed) => ({
+			id: parsed.id,
+			search: parsed.search,
+			replace: parsed.replace,
+			workspace: parsed.workspace,
+			matchAll: parsed['match-all'],
+			preview: parsed.preview
+		})
+	},
+
+	/**
+	 * append 命令：追加文档内容
+	 * 用法：append --id <doc-id> [--content <markdown>] [--file <path>] [--workspace <workspace-id>]
+	 */
+	append: {
+		name: 'append',
+		description: '在文档末尾追加 Markdown 内容',
+		usage: 'append --id <doc-id> [--content <markdown>] [--file <path>] [--workspace <workspace-id>]',
+		args: [
+			{
+				name: 'id',
+				description: '目标文档 ID',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'content',
+				short: 'c',
+				description: '要追加的 Markdown 内容',
+				type: 'string'
+			},
+			{
+				name: 'file',
+				short: 'p',
+				description: '从文件读取 Markdown 内容追加',
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			}
+		],
+		handler: docAppendHandler,
+		paramsMapper: (parsed) => ({
+			id: parsed.id,
+			content: parseContentParam(parsed.content, parsed.file),
+			workspace: parsed.workspace
+		})
+	}
+};
+
+/**
+ * 文档 CLI 操作映射
+ * 将命令配置转换为命令映射，供 CLI 入口使用
+ */
+export const runDocCommands = generateCommandMap(docCommands);
