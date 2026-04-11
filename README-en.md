@@ -115,6 +115,104 @@ affine-cli database list --doc-id <doc-id>
 affine-cli database columns --doc-id <doc-id> --db-id <db-id>
 ```
 
+## Command Reference
+
+### Auth Module (auth)
+
+| Command    | Description                 | Parameters                                                                                                                          |
+| ---------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| **login**  | Login with account or Token | `--url` Server URL <br>`--token` API Token <br>`--workspace` Workspace ID <br>`--local` Save to local <br>`--force` Force overwrite |
+| **logout** | Logout                      | `--local` Delete local config                                                                                                       |
+| **status** | Get login status            | `--json` JSON format output                                                                                                         |
+
+### Workspace Module (workspace)
+
+| Command  | Description        | Parameters                           |
+| -------- | ------------------ | ------------------------------------ |
+| **list** | Get all workspaces | `--format` Output format (text/json) |
+
+### Document Module (doc)
+
+| Command     | Description                                     | Parameters                                                                                                                                                           |
+| ----------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **list**    | List workspace documents (pagination supported) | `--count` Page size <br>`--skip` Offset <br>`--after` Cursor <br>`--workspace` Workspace ID                                                                          |
+| **info**    | Get document details                            | `--id` Document ID <br>`--workspace` Workspace ID <br>`--content` Content mode (markdown/raw/hidden)                                                                 |
+| **create**  | Create new document                             | `--title` Title <br>`--content` Content <br>`--file` Import from file <br>`--folder` Folder ID <br>`--tags` Tag list <br>`--workspace` Workspace ID                  |
+| **search**  | Search documents                                | `--query` Keyword <br>`--workspace` Workspace ID <br>`--count` Result count <br>`--match-mode` Match mode <br>`--tag` Tag filter                                     |
+| **delete**  | Delete document                                 | `--id` Document ID <br>`--workspace` Workspace ID                                                                                                                    |
+| **copy**    | Copy document                                   | `--id` Source doc ID <br>`--title` New title <br>`--parent` Parent doc ID <br>`--folder` Target folder <br>`--workspace` Workspace ID                                |
+| **update**  | Update document properties                      | `--id` Document ID <br>`--title` Title <br>`--parent` Parent doc <br>`--folder` Folder <br>`--workspace` Workspace ID                                                |
+| **replace** | Replace document content                        | `--id` Document ID <br>`--search` Search text <br>`--replace` Replace text <br>`--workspace` Workspace ID <br>`--match-all` Replace all <br>`--preview` Preview mode |
+| **append**  | Append document content                         | `--id` Document ID <br>`--content` Content <br>`--file` Import from file <br>`--workspace` Workspace ID                                                              |
+
+### Tags Module (tags)
+
+| Command    | Description              | Parameters                                                                      |
+| ---------- | ------------------------ | ------------------------------------------------------------------------------- |
+| **list**   | List all tags            | `--workspace` Workspace ID                                                      |
+| **create** | Create tag               | `--tag` Tag name <br>`--color` Color <br>`--workspace` Workspace ID             |
+| **add**    | Add tag to document      | `-d` Document ID <br>`--tag` Tag name <br>`--workspace` Workspace ID            |
+| **remove** | Remove tag from document | `-d` Document ID <br>`--tag` Tag name <br>`--workspace` Workspace ID            |
+| **delete** | Delete tag               | `--tag` Tag name <br>`--workspace` Workspace ID                                 |
+| **info**   | Get documents with tag   | `--tag` Tag name <br>`--workspace` Workspace ID <br>`--ignore-case` Ignore case |
+
+### Folder Module (folder)
+
+| Command    | Description                 | Parameters                                                                                                              |
+| ---------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **all**    | All folders list            | `--workspace` Workspace ID                                                                                              |
+| **list**   | Folder contents list        | `--id` Folder ID <br>`--folder` Folders only <br>`--workspace` Workspace ID                                             |
+| **create** | Create folder               | `--name` Folder name <br>`--parent` Parent folder ID <br>`--index` Sort index <br>`--workspace` Workspace ID            |
+| **delete** | Delete folder               | `--id` Folder ID <br>`--workspace` Workspace ID                                                                         |
+| **update** | Update folder properties    | `--id` Folder ID <br>`--name` Name <br>`--parent` Parent folder <br>`--index` Sort index <br>`--workspace` Workspace ID |
+| **clear**  | Clear empty folders         | `--workspace` Workspace ID                                                                                              |
+| **add**    | Add document to folder      | `--id` Folder ID <br>`--doc` Document ID <br>`--index` Sort index <br>`--workspace` Workspace ID                        |
+| **move**   | Move document to folder     | `--id` Target folder ID <br>`--doc` Document ID <br>`--workspace` Workspace ID                                          |
+| **remove** | Remove document from folder | `--id` Folder ID <br>`--doc` Document ID <br>`--workspace` Workspace ID                                                 |
+
+### Collection Module (collection)
+
+| Command    | Description                     | Parameters                                                                  |
+| ---------- | ------------------------------- | --------------------------------------------------------------------------- |
+| **list**   | All collections list            | `--workspace` Workspace ID                                                  |
+| **info**   | Collection documents list       | `--id` Collection ID <br>`--workspace` Workspace ID                         |
+| **create** | Create collection               | `--name` Collection name <br>`--workspace` Workspace ID                     |
+| **update** | Update collection name          | `--id` Collection ID <br>`--name` New name <br>`--workspace` Workspace ID   |
+| **delete** | Delete collection               | `--id` Collection ID <br>`--workspace` Workspace ID                         |
+| **add**    | Add document to collection      | `--id` Collection ID <br>`--doc` Document ID <br>`--workspace` Workspace ID |
+| **remove** | Remove document from collection | `--id` Collection ID <br>`--doc` Document ID <br>`--workspace` Workspace ID |
+
+### File Module (file)
+
+| Command    | Description               | Parameters                                                                                                                                |
+| ---------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **upload** | Upload attachment         | `--file` File path <br>`--content` Base64 content <br>`--filename` Filename <br>`--content-type` MIME type <br>`--workspace` Workspace ID |
+| **delete** | Delete attachment         | `--id` Attachment ID <br>`--permanently` Permanent delete <br>`--workspace` Workspace ID                                                  |
+| **clean**  | Clean deleted attachments | `--workspace` Workspace ID                                                                                                                |
+
+### Comment Module (comment)
+
+| Command     | Description            | Parameters                                                                                                                                                                |
+| ----------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **list**    | List document comments | `--doc-id` Document ID <br>`--workspace` Workspace ID <br>`--first` Return count <br>`--offset` Offset <br>`--full` Full data                                             |
+| **create**  | Create comment         | `--doc-id` Document ID <br>`--content` Comment content <br>`--workspace` Workspace ID <br>`--selection` Quoted text <br>`--doc-title` Doc title <br>`--doc-mode` Doc mode |
+| **update**  | Update comment         | `--id` Comment ID <br>`--content` New content                                                                                                                             |
+| **delete**  | Delete comment         | `--id` Comment ID <br>`--workspace` Workspace ID <br>`--doc-id` Document ID                                                                                               |
+| **resolve** | Resolve/unresolve      | `--id` Comment ID <br>`--resolved` true/false                                                                                                                             |
+
+### Database Module (database)
+
+| Command     | Description                | Parameters                                                                                                                                                                |
+| ----------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **list**    | List databases in document | `--doc` Document ID <br>`--workspace` Workspace ID                                                                                                                        |
+| **columns** | Read column definitions    | `--doc` Document ID <br>`--id` Database ID <br>`--workspace` Workspace ID                                                                                                 |
+| **query**   | Query data                 | `--doc` Document ID <br>`--id` Database ID <br>`--rows` Row IDs <br>`--columns` Column names <br>`--query` Filter <br>`--full` Full output <br>`--workspace` Workspace ID |
+| **remove**  | Delete rows                | `--doc` Document ID <br>`--id` Database ID <br>`--row` Row ID <br>`--query` Filter <br>`--workspace` Workspace ID                                                         |
+| **update**  | Update rows                | `--doc` Document ID <br>`--id` Database ID <br>`--values` Cell data <br>`--row` Row ID <br>`--query` Filter <br>`--workspace` Workspace ID                                |
+| **create**  | Create database            | `--content` Data (JSON) <br>`--doc` Document ID <br>`--title` Title <br>`--view-mode` View mode <br>`--workspace` Workspace ID                                            |
+| **delete**  | Delete database            | `--doc` Document ID <br>`--id` Database ID <br>`--workspace` Workspace ID                                                                                                 |
+| **insert**  | Insert data                | `--doc` Document ID <br>`--id` Database ID <br>`--content` Data <br>`--workspace` Workspace ID                                                                            |
+
 ## Command Help
 
 ```bash

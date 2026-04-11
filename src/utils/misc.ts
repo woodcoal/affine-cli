@@ -64,8 +64,8 @@ export function parseJsonContent(
 
 	let jsonString: string;
 
-	// 检查是否以 @ 开头（文件路径格式）
-	if (input.startsWith('@') && input.length > 1) {
+	// 检查是否为有效的文件路径格式
+	if (isFilePath(input)) {
 		const filePath = input.slice(1);
 		try {
 			jsonString = fs.readFileSync(filePath, 'utf-8');
@@ -99,4 +99,43 @@ export function parseJsonContent(
 	if (allowObject) validTypes.push('对象');
 
 	throw new Error(`${fieldName} 格式无效，必须是 ${validTypes.join('或')}格式`);
+}
+
+/**
+ * 检查字符串是否为有效的文件路径格式
+ *
+ * 验证规则：
+ * - 必须以 @ 开头
+ * - @ 后面不能为空
+ * - @ 后面必须是单行（不包含换行符）
+ * - 不能是特殊符号如 @# @? @等后跟特殊字符开头
+ *
+ * @param value - 要检查的字符串
+ * @returns 如果是有效的文件路径格式返回 true，否则返回 false
+ */
+export function isFilePath(value: string): boolean {
+	if (!value || typeof value !== 'string') {
+		return false;
+	}
+
+	// 必须以 @ 开头且长度大于 1
+	if (!value.startsWith('@') || value.length <= 1) {
+		return false;
+	}
+
+	// 检查是否包含换行符，制表符等特殊字符（多行不是有效路径）
+	if (value.includes('\n') || value.includes('\r') || value.includes('\t')) {
+		return false;
+	}
+
+	// 获取 @ 后面的内容
+	const pathPart = value.slice(1).trim();
+
+	// 检查是否以特殊字符开头（@# @? @! 等不是有效路径）
+	const firstChar = pathPart.charAt(0);
+	if (/^[#?!\-*]/.test(firstChar)) {
+		return false;
+	}
+
+	return true;
 }

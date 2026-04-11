@@ -115,6 +115,104 @@ affine-cli database list --doc-id <doc-id>
 affine-cli database columns --doc-id <doc-id> --db-id <db-id>
 ```
 
+## 命令详解
+
+### 认证模块 (auth)
+
+| 命令       | 说明                  | 参数                                                                                                                  |
+| ---------- | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **login**  | 使用账号或 Token 登录 | `--url` 服务器地址 <br>`--token` API Token <br>`--workspace` 工作区ID <br>`--local` 保存到本地 <br>`--force` 强制覆盖 |
+| **logout** | 退出登录              | `--local` 删除本地配置                                                                                                |
+| **status** | 获取登录状态          | `--json` JSON格式输出                                                                                                 |
+
+### 工作区模块 (workspace)
+
+| 命令     | 说明                   | 参数                           |
+| -------- | ---------------------- | ------------------------------ |
+| **list** | 获取所有工作区基本信息 | `--format` 输出格式(text/json) |
+
+### 文档模块 (doc)
+
+| 命令        | 说明                       | 参数                                                                                                                                          |
+| ----------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **list**    | 列出工作区文档（支持分页） | `--count` 每页数量 <br>`--skip` 偏移量 <br>`--after` 游标 <br>`--workspace` 工作区ID                                                          |
+| **info**    | 获取文档详情               | `--id` 文档ID <br>`--workspace` 工作区ID <br>`--content` 内容模式(markdown/raw/hidden)                                                        |
+| **create**  | 创建新文档                 | `--title` 标题 <br>`--content` 内容 <br>`--file` 从文件导入 <br>`--folder` 文件夹ID <br>`--tags` 标签列表 <br>`--workspace` 工作区ID          |
+| **search**  | 搜索文档                   | `--query` 关键词 <br>`--workspace` 工作区ID <br>`--count` 返回数量 <br>`--match-mode` 匹配模式 <br>`--tag` 标签过滤                           |
+| **delete**  | 删除文档                   | `--id` 文档ID <br>`--workspace` 工作区ID                                                                                                      |
+| **copy**    | 复制文档                   | `--id` 源文档ID <br>`--title` 新标题 <br>`--parent` 父文档ID <br>`--folder` 目标文件夹 <br>`--workspace` 工作区ID                             |
+| **update**  | 更新文档属性               | `--id` 文档ID <br>`--title` 标题 <br>`--parent` 父文档 <br>`--folder` 文件夹 <br>`--workspace` 工作区ID                                       |
+| **replace** | 替换文档内容               | `--id` 文档ID <br>`--search` 搜索文本 <br>`--replace` 替换文本 <br>`--workspace` 工作区ID <br>`--match-all` 替换所有 <br>`--preview` 预览模式 |
+| **append**  | 追加文档内容               | `--id` 文档ID <br>`--content` 内容 <br>`--file` 从文件导入 <br>`--workspace` 工作区ID                                                         |
+
+### 标签模块 (tags)
+
+| 命令       | 说明               | 参数                                                                     |
+| ---------- | ------------------ | ------------------------------------------------------------------------ |
+| **list**   | 列出所有标签       | `--workspace` 工作区ID                                                   |
+| **create** | 创建标签           | `--tag` 标签名 <br>`--color` 颜色 <br>`--workspace` 工作区ID             |
+| **add**    | 添加标签到文档     | `-d` 文档ID <br>`--tag` 标签名 <br>`--workspace` 工作区ID                |
+| **remove** | 从文档移除标签     | `-d` 文档ID <br>`--tag` 标签名 <br>`--workspace` 工作区ID                |
+| **delete** | 删除标签           | `--tag` 标签名 <br>`--workspace` 工作区ID                                |
+| **info**   | 获取标签关联的文档 | `--tag` 标签名 <br>`--workspace` 工作区ID <br>`--ignore-case` 忽略大小写 |
+
+### 文件夹模块 (folder)
+
+| 命令       | 说明                 | 参数                                                                                                    |
+| ---------- | -------------------- | ------------------------------------------------------------------------------------------------------- |
+| **all**    | 所有文件夹列表       | `--workspace` 工作区ID                                                                                  |
+| **list**   | 文件夹内容列表       | `--id` 文件夹ID <br>`--folder` 仅文件夹 <br>`--workspace` 工作区ID                                      |
+| **create** | 创建文件夹           | `--name` 文件夹名 <br>`--parent` 父文件夹ID <br>`--index` 排序索引 <br>`--workspace` 工作区ID           |
+| **delete** | 删除文件夹           | `--id` 文件夹ID <br>`--workspace` 工作区ID                                                              |
+| **update** | 更新文件夹属性       | `--id` 文件夹ID <br>`--name` 名称 <br>`--parent` 父文件夹 <br>`--index` 排序 <br>`--workspace` 工作区ID |
+| **clear**  | 清除空文件夹         | `--workspace` 工作区ID                                                                                  |
+| **add**    | 添加文档到文件夹     | `--id` 文件夹ID <br>`--doc` 文档ID <br>`--index` 排序 <br>`--workspace` 工作区ID                        |
+| **move**   | 移动文档到目标文件夹 | `--id` 目标文件夹ID <br>`--doc` 文档ID <br>`--workspace` 工作区ID                                       |
+| **remove** | 从文件夹移除文档     | `--id` 文件夹ID <br>`--doc` 文档ID <br>`--workspace` 工作区ID                                           |
+
+### 收藏夹模块 (collection)
+
+| 命令       | 说明             | 参数                                                           |
+| ---------- | ---------------- | -------------------------------------------------------------- |
+| **list**   | 所有收藏夹列表   | `--workspace` 工作区ID                                         |
+| **info**   | 收藏夹内文档列表 | `--id` 收藏夹ID <br>`--workspace` 工作区ID                     |
+| **create** | 创建收藏夹       | `--name` 收藏夹名 <br>`--workspace` 工作区ID                   |
+| **update** | 更新收藏夹名称   | `--id` 收藏夹ID <br>`--name` 新名称 <br>`--workspace` 工作区ID |
+| **delete** | 删除收藏夹       | `--id` 收藏夹ID <br>`--workspace` 工作区ID                     |
+| **add**    | 添加文档到收藏夹 | `--id` 收藏夹ID <br>`--doc` 文档ID <br>`--workspace` 工作区ID  |
+| **remove** | 从收藏夹移除文档 | `--id` 收藏夹ID <br>`--doc` 文档ID <br>`--workspace` 工作区ID  |
+
+### 文件模块 (file)
+
+| 命令       | 说明           | 参数                                                                                                                          |
+| ---------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **upload** | 上传附件       | `--file` 文件路径 <br>`--content` Base64内容 <br>`--filename` 文件名 <br>`--content-type` MIME类型 <br>`--workspace` 工作区ID |
+| **delete** | 删除附件       | `--id` 附件ID <br>`--permanently` 永久删除 <br>`--workspace` 工作区ID                                                         |
+| **clean**  | 清理已删除附件 | `--workspace` 工作区ID                                                                                                        |
+
+### 评论模块 (comment)
+
+| 命令        | 说明          | 参数                                                                                                                                                  |
+| ----------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **list**    | 列出文档评论  | `--doc-id` 文档ID <br>`--workspace` 工作区ID <br>`--first` 返回数量 <br>`--offset` 偏移量 <br>`--full` 完整数据                                       |
+| **create**  | 创建评论      | `--doc-id` 文档ID <br>`--content` 评论内容 <br>`--workspace` 工作区ID <br>`--selection` 引用文本 <br>`--doc-title` 文档标题 <br>`--doc-mode` 文档模式 |
+| **update**  | 更新评论      | `--id` 评论ID <br>`--content` 新内容                                                                                                                  |
+| **delete**  | 删除评论      | `--id` 评论ID <br>`--workspace` 工作区ID <br>`--doc-id` 文档ID                                                                                        |
+| **resolve** | 解决/取消解决 | `--id` 评论ID <br>`--resolved` true/false                                                                                                             |
+
+### 数据库模块 (database)
+
+| 命令        | 说明             | 参数                                                                                                                                                      |
+| ----------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **list**    | 列出文档中数据库 | `--doc` 文档ID <br>`--workspace` 工作区ID                                                                                                                 |
+| **columns** | 读取列定义       | `--doc` 文档ID <br>`--id` 数据库ID <br>`--workspace` 工作区ID                                                                                             |
+| **query**   | 查询数据         | `--doc` 文档ID <br>`--id` 数据库ID <br>`--rows` 行ID列表 <br>`--columns` 列名列表 <br>`--query` 筛选条件 <br>`--full` 完整输出 <br>`--workspace` 工作区ID |
+| **remove**  | 删除行           | `--doc` 文档ID <br>`--id` 数据库ID <br>`--row` 行ID <br>`--query` 筛选条件 <br>`--workspace` 工作区ID                                                     |
+| **update**  | 更新行           | `--doc` 文档ID <br>`--id` 数据库ID <br>`--values` 单元格数据 <br>`--row` 行ID <br>`--query` 筛选条件 <br>`--workspace` 工作区ID                           |
+| **create**  | 创建数据库       | `--content` 数据(JSON) <br>`--doc` 文档ID <br>`--title` 标题 <br>`--view-mode` 视图模式 <br>`--workspace` 工作区ID                                        |
+| **delete**  | 删除数据库       | `--doc` 文档ID <br>`--id` 数据库ID <br>`--workspace` 工作区ID                                                                                             |
+| **insert**  | 插入数据         | `--doc` 文档ID <br>`--id` 数据库ID <br>`--content` 数据 <br>`--workspace` 工作区ID                                                                        |
+
 ## 命令帮助
 
 ```bash

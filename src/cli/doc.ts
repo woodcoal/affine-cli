@@ -5,6 +5,7 @@
 
 import { CommandConfig, generateCommandMap } from '../utils/cliUtils.js';
 import { convertToMarkdown } from '../utils/fileConverter.js';
+import { isFilePath } from '../utils/misc.js';
 
 import {
 	docListHandler,
@@ -20,17 +21,23 @@ import {
 
 /**
  * 解析内容参数
- * 支持 --content 直接输入或 --file 读取文件
+ * 支持 --content 直接输入或 @ 开头的文件路径
  *
- * @param contentValue - --content 参数值
- * @param fileValue - --file 参数值
+ * @param contentValue - --content 参数值（支持 @filePath 格式）
  * @returns 解析后的内容字符串
  */
-function parseContentParam(contentValue?: string, fileValue?: string): string {
-	if (fileValue) {
-		return convertToMarkdown(fileValue);
+function parseContentParam(contentValue?: string): string {
+	if (!contentValue) {
+		return '';
 	}
-	return contentValue || '';
+
+	// 检查是否为有效的文件路径格式
+	if (isFilePath(contentValue)) {
+		const filePath = contentValue.slice(1);
+		return convertToMarkdown(filePath);
+	}
+
+	return contentValue;
 }
 
 /**
@@ -55,11 +62,13 @@ const docCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'skip',
+				short: 's',
 				description: '偏移量（用于跳过前面的文档）',
 				type: 'number'
 			},
 			{
 				name: 'after',
+				short: 'a',
 				description: '游标值（用于分页，获取下一页）',
 				type: 'string'
 			},
@@ -90,6 +99,7 @@ const docCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '文档 ID',
 				required: true,
 				type: 'string'
@@ -117,12 +127,12 @@ const docCommands: Record<string, CommandConfig> = {
 
 	/**
 	 * create 命令：创建文档
-	 * 用法：create [--title <title>] [--content <markdown>] [--file <path>] [--folder <folder-id>] [--tags <tag1,tag2>] [--workspace <workspace-id>]
+	 * 用法：create --title <title> [--content <markdown|@file>] [--folder <folder-id>] [--tags <tag1,tag2>] [--workspace <workspace-id>]
 	 */
 	create: {
 		name: 'create',
 		description: '创建新文档（支持从 Markdown 文件导入）',
-		usage: 'create [--title <title>] [--content <markdown>] [--file <path>] [--folder <folder-id>] [--tags <tag1,tag2>] [--workspace <workspace-id>]',
+		usage: 'create --title <title> [--content <markdown|@file>] [--folder <folder-id>] [--tags <tag1,tag2>] [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'title',
@@ -133,13 +143,7 @@ const docCommands: Record<string, CommandConfig> = {
 			{
 				name: 'content',
 				short: 'c',
-				description: '文档内容（Markdown 格式）',
-				type: 'string'
-			},
-			{
-				name: 'file',
-				short: 'p',
-				description: '从文件读取 Markdown 内容（优先级高于 --content）',
+				description: '文档内容（Markdown 格式；以 @ 开头表示文件路径）',
 				type: 'string'
 			},
 			{
@@ -163,7 +167,7 @@ const docCommands: Record<string, CommandConfig> = {
 		handler: docCreateHandler,
 		paramsMapper: (parsed) => ({
 			title: parsed.title,
-			content: parseContentParam(parsed.content, parsed.file),
+			content: parseContentParam(parsed.content),
 			folder: parsed.folder,
 			tags: parsed.tags,
 			workspace: parsed.workspace
@@ -231,6 +235,7 @@ const docCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '要删除的文档 ID',
 				required: true,
 				type: 'string'
@@ -260,6 +265,7 @@ const docCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '源文档 ID',
 				required: true,
 				type: 'string'
@@ -310,6 +316,7 @@ const docCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '要更新的文档 ID',
 				required: true,
 				type: 'string'
@@ -360,6 +367,7 @@ const docCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '文档 ID',
 				required: true,
 				type: 'string'
@@ -410,15 +418,16 @@ const docCommands: Record<string, CommandConfig> = {
 
 	/**
 	 * append 命令：追加文档内容
-	 * 用法：append --id <doc-id> [--content <markdown>] [--file <path>] [--workspace <workspace-id>]
+	 * 用法：append --id <doc-id> [--content <markdown|@file>] [--workspace <workspace-id>]
 	 */
 	append: {
 		name: 'append',
 		description: '在文档末尾追加 Markdown 内容',
-		usage: 'append --id <doc-id> [--content <markdown>] [--file <path>] [--workspace <workspace-id>]',
+		usage: 'append --id <doc-id> [--content <markdown|@file>] [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '目标文档 ID',
 				required: true,
 				type: 'string'
@@ -426,13 +435,7 @@ const docCommands: Record<string, CommandConfig> = {
 			{
 				name: 'content',
 				short: 'c',
-				description: '要追加的 Markdown 内容',
-				type: 'string'
-			},
-			{
-				name: 'file',
-				short: 'p',
-				description: '从文件读取 Markdown 内容追加',
+				description: '要追加的 Markdown 内容（以 @ 开头表示文件路径）',
 				type: 'string'
 			},
 			{
@@ -445,7 +448,7 @@ const docCommands: Record<string, CommandConfig> = {
 		handler: docAppendHandler,
 		paramsMapper: (parsed) => ({
 			id: parsed.id,
-			content: parseContentParam(parsed.content, parsed.file),
+			content: parseContentParam(parsed.content),
 			workspace: parsed.workspace
 		})
 	}
