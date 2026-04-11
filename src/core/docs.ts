@@ -5,14 +5,17 @@
 
 import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId, getBaseUrl } from '../utils/config.js';
-import { createDocFromMarkdownCore, collectDocForMarkdown } from '../utils/docsUtil.js';
 import {
-	getWorkspaceDocInfo,
-	connectWorkspaceSocket,
+	createDocFromMarkdownCore,
+	collectDocForMarkdown,
+	getWorkspaceTagOptions
+} from '../utils/docsUtil.js';
+import {
+	getWorkspaceDocs,
+	createWorkspaceSocket,
 	joinWorkspace,
 	loadDoc,
 	pushDocUpdate,
-	getWorkspaceTagOptions,
 	extractTagNames
 } from '../utils/wsClient.js';
 import { renderBlocksToMarkdown } from '../markdown/render.js';
@@ -86,7 +89,7 @@ export async function docListHandler(params: {
 	});
 
 	const docs = data.workspace.docs;
-	const pagesInfo = await getWorkspaceDocInfo(workspaceId);
+	const pagesInfo = await getWorkspaceDocs(workspaceId);
 
 	const edges = docs.edges.map((edge: any) => {
 		const pageInfo = pagesInfo.get(edge.node.id);
@@ -163,7 +166,7 @@ export async function docInfoHandler(params: {
 		throw new Error(`文档 ${params.id} 不存在`);
 	}
 
-	const pagesInfo = await getWorkspaceDocInfo(workspaceId);
+	const pagesInfo = await getWorkspaceDocs(workspaceId);
 	const pageInfo = pagesInfo.get(params.id);
 
 	const result: any = {
@@ -186,7 +189,7 @@ export async function docInfoHandler(params: {
 	}
 
 	// 连接 WebSocket 获取文档内容
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -309,7 +312,7 @@ export async function docCreateHandler(params: {
  */
 export async function docDeleteHandler(params: { id: string; workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -386,7 +389,7 @@ export async function docCopyHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	const newDocId = generateId(12, 'doc');
 	const newTitle = params.title || '复制文档';
@@ -712,7 +715,7 @@ export async function docUpdateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -940,7 +943,7 @@ export async function docSearchHandler(params: {
 	tag?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	const limit = params.count || 20;
 	const query = (params.query || '').trim();
@@ -1090,7 +1093,7 @@ export async function docReplaceHandler(params: {
 	preview?: boolean;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	const searchText = params.search;
 	const replaceText = params.replace;
@@ -1311,7 +1314,7 @@ export async function docAppendHandler(params: {
 		};
 	}
 
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

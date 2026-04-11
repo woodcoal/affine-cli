@@ -5,12 +5,7 @@
 
 import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId } from '../utils/config.js';
-import {
-	connectWorkspaceSocket,
-	joinWorkspace,
-	loadDoc,
-	pushDocUpdate
-} from '../utils/wsClient.js';
+import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from '../utils/wsClient.js';
 import { generateId } from '../utils/misc.js';
 import * as Y from 'yjs';
 
@@ -447,7 +442,7 @@ async function addCommentMarkToDocument(
 	selection: string,
 	commentId: string
 ): Promise<void> {
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -781,7 +776,7 @@ async function removeCommentMarkFromDocument(
 	docId: string,
 	commentId: string
 ): Promise<void> {
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

@@ -12,12 +12,7 @@
 
 import * as Y from 'yjs';
 import { getWorkspaceId } from '../utils/config.js';
-import {
-	connectWorkspaceSocket,
-	joinWorkspace,
-	loadDoc,
-	pushDocUpdate
-} from '../utils/wsClient.js';
+import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from '../utils/wsClient.js';
 import { generateId } from '../utils/misc.js';
 import { SELECT_COLORS } from './constants.js';
 
@@ -1036,7 +1031,7 @@ async function loadDatabaseDocContext(
 	docId: string,
 	databaseBlockId: string
 ): Promise<DatabaseDocContext> {
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 	await joinWorkspace(socket, workspaceId);
 	const doc = new Y.Doc();
 	const snapshot = await loadDoc(socket, workspaceId, docId);
@@ -2134,7 +2129,7 @@ export async function listDatabasesHandler(params: {
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
 	if (!workspaceId) throw new Error('workspaceId is required');
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -2239,7 +2234,7 @@ export async function createDatabaseHandler(params: {
 	const workspaceId = getWorkspaceId(params.workspace);
 	if (!workspaceId) throw new Error('workspaceId is required');
 
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	let targetDocId = params.docId;
 
@@ -2808,7 +2803,7 @@ export async function deleteDatabaseHandler(params: {
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
 	if (!workspaceId) throw new Error('workspaceId is required');
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -2939,7 +2934,7 @@ export async function insertDatabaseHandler(params: {
 		throw new Error('JSON 格式无效');
 	}
 
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

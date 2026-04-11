@@ -22,7 +22,7 @@
  */
 
 import * as Y from 'yjs';
-import { connectWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from './wsClient.js';
+import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from './wsClient.js';
 import { parseMarkdownToOperations } from '../markdown/parse.js';
 import type { MarkdownOperation, TextDelta } from '../markdown/types.js';
 import { SELECT_COLORS } from '../core/constants.js';
@@ -315,7 +315,7 @@ async function applyMarkdownOperationsInternal(
 	docId: string,
 	operations: MarkdownOperation[]
 ): Promise<{ appendedCount: number; skippedCount: number; blockIds: string[] }> {
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -427,7 +427,7 @@ async function createDocInternal(
 	title: string,
 	content?: string
 ): Promise<{ workspaceId: string; docId: string; title: string }> {
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -606,7 +606,7 @@ async function ensureTagOption(wsDoc: Y.Doc, tagName: string): Promise<string> {
  * 添加文档到文件夹
  */
 async function addDocToFolder(workspaceId: string, docId: string, folderId: string): Promise<void> {
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -769,7 +769,7 @@ export async function createDocFromMarkdownCore(parsed: {
 
 	// 添加标签到文档
 	if (tagNames.length > 0) {
-		const socket = await connectWorkspaceSocket();
+		const socket = await createWorkspaceSocket();
 
 		try {
 			await joinWorkspace(socket, workspaceId);
@@ -855,7 +855,7 @@ export async function createDocFromMarkdownCore(parsed: {
 	let linkedToParent = false;
 	if (parsed.parentDocId) {
 		try {
-			const socket = await connectWorkspaceSocket();
+			const socket = await createWorkspaceSocket();
 
 			try {
 				await joinWorkspace(socket, workspaceId);
@@ -1069,25 +1069,29 @@ export type WorkspaceTagOption = {
  * 获取工作区的标签选项
  */
 export function getWorkspaceTagOptions(meta: Y.Map<any>): WorkspaceTagOption[] {
-	const properties = meta.get('properties') as Y.Map<any> | undefined;
-	if (!properties) return [];
+	const properties = meta.get('properties');
+	if (!properties || !(properties instanceof Y.Map)) return [];
 
-	const tags = properties.get('tags') as Y.Map<any> | undefined;
-	if (!tags) return [];
+	const tags = properties.get('tags');
+	if (!tags || !(tags instanceof Y.Map)) return [];
 
-	const options = tags.get('options') as Y.Array<any> | undefined;
-	if (!options) return [];
+	const options = tags.get('options');
+	if (!options || !(options instanceof Y.Array)) return [];
 
 	const result: WorkspaceTagOption[] = [];
-	options.forEach((opt: unknown) => {
+	options.forEach((opt) => {
 		if (opt instanceof Y.Map) {
-			result.push({
-				id: opt.get('id') || '',
-				value: opt.get('value') || '',
-				color: opt.get('color') || TAG_OPTION_COLORS[0],
-				createDate: opt.get('createDate') || null,
-				updateDate: opt.get('updateDate') || null
-			});
+			const id = opt.get('id');
+			const value = opt.get('value');
+			if (typeof id === 'string' && typeof value === 'string') {
+				result.push({
+					id,
+					value,
+					color: opt.get('color') || TAG_OPTION_COLORS[0],
+					createDate: opt.get('createDate') || null,
+					updateDate: opt.get('updateDate') || null
+				});
+			}
 		}
 	});
 	return result;

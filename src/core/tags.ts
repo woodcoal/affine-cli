@@ -5,12 +5,7 @@
  */
 
 import { getWorkspaceId } from '../utils/config.js';
-import {
-	connectWorkspaceSocket,
-	joinWorkspace,
-	loadDoc,
-	pushDocUpdate
-} from '../utils/wsClient.js';
+import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from '../utils/wsClient.js';
 import { SELECT_COLORS } from './constants.js';
 import * as Y from 'yjs';
 import { generateId } from '../utils/misc.js';
@@ -243,7 +238,7 @@ function getStringArray(value: unknown): string[] {
  */
 export async function tagsListHandler(params: { workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -326,7 +321,7 @@ export async function tagsCreateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 
 	try {
@@ -409,7 +404,7 @@ export async function tagsDocAddHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 
 	try {
@@ -501,7 +496,7 @@ export async function tagsDocRemoveHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 
 	try {
@@ -574,7 +569,7 @@ export async function tagsDocRemoveHandler(params: {
  */
 export async function tagsDeleteHandler(params: { tag: string; workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 
 	try {
@@ -651,7 +646,7 @@ export async function tagsDocListHandler(params: {
 	ignoreCase?: boolean;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 	const ignoreCase = params.ignoreCase ?? true;
 

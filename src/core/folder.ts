@@ -5,11 +5,11 @@
 
 import { getWorkspaceId } from '../utils/config.js';
 import {
-	connectWorkspaceSocket,
+	createWorkspaceSocket,
 	joinWorkspace,
 	loadDoc,
 	pushDocUpdate,
-	getWorkspaceDocInfo
+	getWorkspaceDocs
 } from '../utils/wsClient.js';
 import * as Y from 'yjs';
 import { generateId } from '../utils/misc.js';
@@ -147,7 +147,7 @@ async function generateFractionalIndexingKeyBetween(
  */
 export async function folderAllHandler(params: { workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -194,7 +194,7 @@ export async function folderListHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -213,7 +213,7 @@ export async function folderListHandler(params: {
 			? children.filter((node: any) => node.type === 'folder' || node.type === 'tag')
 			: children.filter((node: any) => node.type === 'doc');
 
-		const pagesInfo = await getWorkspaceDocInfo(workspaceId);
+		const pagesInfo = await getWorkspaceDocs(workspaceId);
 
 		return filteredChildren.map((child: any) => {
 			const isFolderRef = child.type === 'tag';
@@ -254,7 +254,7 @@ export async function folderCreateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -312,7 +312,7 @@ export async function folderDeleteHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -366,7 +366,7 @@ export async function folderAddHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -430,7 +430,7 @@ export async function folderMoveHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -499,7 +499,7 @@ export async function folderRemoveHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -560,7 +560,7 @@ export async function folderUpdateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -618,7 +618,7 @@ export async function folderUpdateHandler(params: {
  */
 export async function folderClearHandler(params: { workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

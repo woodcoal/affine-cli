@@ -6,11 +6,11 @@
 
 import { getWorkspaceId } from '../utils/config.js';
 import {
-	connectWorkspaceSocket,
+	createWorkspaceSocket,
 	joinWorkspace,
 	loadDoc,
 	pushDocUpdate,
-	getWorkspaceDocInfo
+	getWorkspaceDocs
 } from '../utils/wsClient.js';
 import * as Y from 'yjs';
 import { generateId } from '../utils/misc.js';
@@ -115,7 +115,7 @@ function findCollectionIndex(array: Y.Array<any>, id: string): number {
  */
 export async function collectionListHandler(params: { workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -158,7 +158,7 @@ export async function collectionInfoHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -178,7 +178,7 @@ export async function collectionInfoHandler(params: {
 			throw new Error(`收藏夹 ${params.id} 不存在`);
 		}
 
-		const pagesInfo = await getWorkspaceDocInfo(workspaceId);
+		const pagesInfo = await getWorkspaceDocs(workspaceId);
 
 		const docs = collection.allowList.map((docId) => {
 			const pageInfo = pagesInfo.get(docId);
@@ -216,7 +216,7 @@ export async function collectionCreateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -281,7 +281,7 @@ export async function collectionUpdateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -349,7 +349,7 @@ export async function collectionDeleteHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -407,7 +407,7 @@ export async function collectionAddHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -476,7 +476,7 @@ export async function collectionRemoveHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const socket = await connectWorkspaceSocket();
+	const socket = await createWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
