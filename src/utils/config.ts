@@ -232,6 +232,25 @@ export function redactSecret(value: string | undefined): string | null {
  * - getWorkspaceId() // 使用配置中的默认工作区
  * - getWorkspaceId('workspace-123') // 使用参数指定的工作区
  */
+/**
+ * 获取 Affine 基础 URL
+ *
+ * @returns 基础 URL（默认 https://app.affine.pro）
+ */
+export function getBaseUrl(): string {
+	const config = loadConfig();
+	return config.baseUrl;
+}
+
+/**
+ * 获取工作区 ID
+ *
+ * 优先级：参数 > 环境变量/配置文件 > 报错
+ *
+ * @param paramsWorkspaceId - 可选的 workspace ID 参数
+ * @returns 工作区 ID
+ * @throws 如果没有配置 workspaceId
+ */
 export function getWorkspaceId(paramsWorkspaceId?: string): string {
 	const config = loadConfig();
 	const workspaceId = paramsWorkspaceId || config.defaultWorkspaceId;

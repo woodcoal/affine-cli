@@ -4,7 +4,7 @@
  */
 
 import { createGraphQLClient } from '../utils/graphqlClient.js';
-import { getWorkspaceId } from '../utils/config.js';
+import { getWorkspaceId, getBaseUrl } from '../utils/config.js';
 import { createDocFromMarkdownCore, collectDocForMarkdown } from '../utils/docsUtil.js';
 import {
 	wsUrlFromGraphQLEndpoint,
@@ -1734,4 +1734,78 @@ function createBlockFromOperation(
 		default:
 			return null;
 	}
+}
+
+/**
+ * docPublishHandler: 发布文档（公开访问）
+ *
+ * 功能描述：
+ * - 通过 GraphQL API 将文档设置为公开访问
+ * - 返回公开的文档信息
+ *
+ * @param params.workspace - 工作区 ID（默认使用配置中的工作区）
+ * @param params.docId - 文档 ID（必需）
+ * @param params.mode - 公开模式，'Page' 或 'Edgeless'（默认 'Page'）
+ * @returns 公开的文档信息
+ */
+export async function docPublishHandler(params: {
+	workspace?: string;
+	docId: string;
+	mode?: 'Page' | 'Edgeless';
+}): Promise<any> {
+	const workspaceId = getWorkspaceId(params.workspace);
+	if (!workspaceId) {
+		throw new Error(
+			'workspaceId is required. Provide it as a parameter or set AFFINE_WORKSPACE_ID in environment.'
+		);
+	}
+
+	const gql = await createGraphQLClient();
+	const mutation = `mutation PublishDoc($workspaceId:String!,$docId:String!,$mode:PublicDocMode){ publishDoc(workspaceId:$workspaceId, docId:$docId, mode:$mode){ id workspaceId public mode } }`;
+
+	const data = await gql.request<{ publishDoc: any }>(mutation, {
+		workspaceId,
+		docId: params.docId,
+		mode: params.mode || 'Page'
+	});
+
+	const result = data.publishDoc;
+	const baseUrl = getBaseUrl();
+	const publicMode = params.mode || 'Page';
+	result.publicUrl = `${baseUrl}/workspace/${workspaceId}/${params.docId}?mode=${publicMode}`;
+
+	return result;
+}
+
+/**
+ * docUnpublishHandler: 取消发布文档（取消公开访问）
+ *
+ * 功能描述：
+ * - 通过 GraphQL API 撤销文档的公开访问权限
+ * - 返回取消公开后的文档信息
+ *
+ * @param params.workspace - 工作区 ID（默认使用配置中的工作区）
+ * @param params.docId - 文档 ID（必需）
+ * @returns 取消公开后的文档信息
+ */
+export async function docUnpublishHandler(params: {
+	workspace?: string;
+	docId: string;
+}): Promise<any> {
+	const workspaceId = getWorkspaceId(params.workspace);
+	if (!workspaceId) {
+		throw new Error(
+			'workspaceId is required. Provide it as a parameter or set AFFINE_WORKSPACE_ID in environment.'
+		);
+	}
+
+	const gql = await createGraphQLClient();
+	const mutation = `mutation RevokeDoc($workspaceId:String!,$docId:String!){ revokePublicDoc(workspaceId:$workspaceId, docId:$docId){ id workspaceId public } }`;
+
+	const data = await gql.request<{ revokePublicDoc: any }>(mutation, {
+		workspaceId,
+		docId: params.docId
+	});
+
+	return data.revokePublicDoc;
 }

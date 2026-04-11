@@ -16,7 +16,9 @@ import {
 	docUpdateHandler,
 	docSearchHandler,
 	docReplaceHandler,
-	docAppendHandler
+	docAppendHandler,
+	docPublishHandler,
+	docUnpublishHandler
 } from '../core/docs.js';
 
 /**
@@ -449,6 +451,73 @@ const docCommands: Record<string, CommandConfig> = {
 		paramsMapper: (parsed) => ({
 			id: parsed.id,
 			content: parseContentParam(parsed.content),
+			workspace: parsed.workspace
+		})
+	},
+
+	/**
+	 * publish 命令：发布文档（公开访问）
+	 * 用法：publish --id <doc-id> [--mode <Page|Edgeless>] [--workspace <workspace-id>]
+	 */
+	publish: {
+		name: 'publish',
+		description: '发布文档（公开访问）',
+		usage: 'publish --id <doc-id> [--mode <Page|Edgeless>] [--workspace <workspace-id>]',
+		args: [
+			{
+				name: 'id',
+				short: 'i',
+				description: '要发布的文档 ID',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'mode',
+				short: 'm',
+				description: '公开模式：Page 或 Edgeless',
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			}
+		],
+		handler: docPublishHandler,
+		paramsMapper: (parsed) => ({
+			docId: parsed.id,
+			mode: parsed.mode as 'Page' | 'Edgeless' | undefined,
+			workspace: parsed.workspace
+		})
+	},
+
+	/**
+	 * unpublish 命令：取消发布文档
+	 * 用法：unpublish --id <doc-id> [--workspace <workspace-id>]
+	 */
+	unpublish: {
+		name: 'unpublish',
+		description: '取消发布文档',
+		usage: 'unpublish --id <doc-id> [--workspace <workspace-id>]',
+		args: [
+			{
+				name: 'id',
+				short: 'i',
+				description: '要取消发布的文档 ID',
+				required: true,
+				type: 'string'
+			},
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			}
+		],
+		handler: docUnpublishHandler,
+		paramsMapper: (parsed) => ({
+			docId: parsed.id,
 			workspace: parsed.workspace
 		})
 	}
