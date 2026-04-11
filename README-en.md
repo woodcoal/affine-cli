@@ -30,9 +30,6 @@ npm install
 
 # Build the project
 npm run build
-
-# Link the CLI (optional, for local development testing)
-npm link
 ```
 
 ### Global Installation (Recommended)
@@ -40,9 +37,6 @@ npm link
 ```bash
 # Install globally from npm (if published)
 npm install -g affine-cli
-
-# Or install from GitHub
-npm install -g github:woodcoal/affine-cli
 
 # After installation, you can use affine-cli command from any directory
 ```
@@ -57,12 +51,6 @@ Create a `.env` file in your project directory or use global configuration:
 
 AFFINE_BASE_URL=https://app.affine.pro
 AFFINE_API_TOKEN=your_api_token
-# or
-AFFINE_COOKIE=your_cookie
-# or
-AFFINE_EMAIL=your_email
-AFFINE_PASSWORD=your_password
-
 AFFINE_WORKSPACE_ID=your_workspace_id
 ```
 
@@ -133,17 +121,19 @@ affine-cli database columns --doc-id <doc-id> --db-id <db-id>
 
 ### Document Module (doc)
 
-| Command     | Description                                     | Parameters                                                                                                                                                           |
-| ----------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **list**    | List workspace documents (pagination supported) | `--count` Page size <br>`--skip` Offset <br>`--after` Cursor <br>`--workspace` Workspace ID                                                                          |
-| **info**    | Get document details                            | `--id` Document ID <br>`--workspace` Workspace ID <br>`--content` Content mode (markdown/raw/hidden)                                                                 |
-| **create**  | Create new document                             | `--title` Title <br>`--content` Content <br>`--file` Import from file <br>`--folder` Folder ID <br>`--tags` Tag list <br>`--workspace` Workspace ID                  |
-| **search**  | Search documents                                | `--query` Keyword <br>`--workspace` Workspace ID <br>`--count` Result count <br>`--match-mode` Match mode <br>`--tag` Tag filter                                     |
-| **delete**  | Delete document                                 | `--id` Document ID <br>`--workspace` Workspace ID                                                                                                                    |
-| **copy**    | Copy document                                   | `--id` Source doc ID <br>`--title` New title <br>`--parent` Parent doc ID <br>`--folder` Target folder <br>`--workspace` Workspace ID                                |
-| **update**  | Update document properties                      | `--id` Document ID <br>`--title` Title <br>`--parent` Parent doc <br>`--folder` Folder <br>`--workspace` Workspace ID                                                |
-| **replace** | Replace document content                        | `--id` Document ID <br>`--search` Search text <br>`--replace` Replace text <br>`--workspace` Workspace ID <br>`--match-all` Replace all <br>`--preview` Preview mode |
-| **append**  | Append document content                         | `--id` Document ID <br>`--content` Content <br>`--file` Import from file <br>`--workspace` Workspace ID                                                              |
+| Command       | Description                                     | Parameters                                                                                                                                                           |
+| ------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **list**      | List workspace documents (pagination supported) | `--count` Page size <br>`--skip` Offset <br>`--after` Cursor <br>`--workspace` Workspace ID                                                                          |
+| **info**      | Get document details                            | `--id` Document ID <br>`--workspace` Workspace ID <br>`--content` Content mode (markdown/raw/hidden)                                                                 |
+| **create**    | Create new document                             | `--title` Title <br>`--content` Content <br>`--file` Import from file <br>`--folder` Folder ID <br>`--tags` Tag list <br>`--workspace` Workspace ID                  |
+| **search**    | Search documents                                | `--query` Keyword <br>`--workspace` Workspace ID <br>`--count` Result count <br>`--match-mode` Match mode <br>`--tag` Tag filter                                     |
+| **delete**    | Delete document                                 | `--id` Document ID <br>`--workspace` Workspace ID                                                                                                                    |
+| **copy**      | Copy document                                   | `--id` Source doc ID <br>`--title` New title <br>`--parent` Parent doc ID <br>`--folder` Target folder <br>`--workspace` Workspace ID                                |
+| **update**    | Update document properties                      | `--id` Document ID <br>`--title` Title <br>`--parent` Parent doc <br>`--folder` Folder <br>`--workspace` Workspace ID                                                |
+| **replace**   | Replace document content                        | `--id` Document ID <br>`--search` Search text <br>`--replace` Replace text <br>`--workspace` Workspace ID <br>`--match-all` Replace all <br>`--preview` Preview mode |
+| **append**    | Append document content                         | `--id` Document ID <br>`--content` Content <br>`--file` Import from file <br>`--workspace` Workspace ID                                                              |
+| **publish**   | Publish document                                | `--id` Document ID <br>`--workspace` Workspace ID                                                                                                                    |
+| **unpublish** | Unpublish document                              | `--id` Document ID <br>`--workspace` Workspace ID                                                                                                                    |
 
 ### Tags Module (tags)
 

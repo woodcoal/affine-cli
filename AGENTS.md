@@ -30,7 +30,7 @@ npm run clean    # 清理 dist 目录
 ```
 affine-cli <模块> <操作> [选项]
 
-模块: auth, workspace, doc, tags, folder, collection, file
+模块: auth, workspace, doc, tags, folder, collection, file, database
 示例:
   affine-cli auth login
   affine-cli doc list --workspace <workspace-id>
@@ -44,8 +44,7 @@ affine-cli <模块> <操作> [选项]
 关键配置项：
 
 - `AFFINE_BASE_URL` - Affine 服务器地址（默认 https://app.affine.pro）
-- `AFFINE_API_TOKEN` / `AFFINE_COOKIE` - 认证凭据
-- `AFFINE_EMAIL` / `AFFINE_PASSWORD` - 账号密码登录
+- `AFFINE_API_TOKEN` - 认证凭据
 - `AFFINE_WORKSPACE_ID` - 默认工作区 ID
 
 ## 目录结构
