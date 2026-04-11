@@ -4,10 +4,8 @@
  * 使用 WebSocket + Yjs 方式存储在工作区的 setting.map.collections 中
  */
 
-import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId } from '../utils/config.js';
 import {
-	wsUrlFromGraphQLEndpoint,
 	connectWorkspaceSocket,
 	joinWorkspace,
 	loadDoc,
@@ -117,9 +115,7 @@ function findCollectionIndex(array: Y.Array<any>, id: string): number {
  */
 export async function collectionListHandler(params: { workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -162,9 +158,7 @@ export async function collectionInfoHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -184,7 +178,7 @@ export async function collectionInfoHandler(params: {
 			throw new Error(`收藏夹 ${params.id} 不存在`);
 		}
 
-		const pagesInfo = await getWorkspaceDocInfo(wsUrl, workspaceId, gql.cookie, gql.bearer);
+		const pagesInfo = await getWorkspaceDocInfo(workspaceId);
 
 		const docs = collection.allowList.map((docId) => {
 			const pageInfo = pagesInfo.get(docId);
@@ -222,9 +216,7 @@ export async function collectionCreateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -289,9 +281,7 @@ export async function collectionUpdateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -359,9 +349,7 @@ export async function collectionDeleteHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -419,9 +407,7 @@ export async function collectionAddHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -490,9 +476,7 @@ export async function collectionRemoveHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

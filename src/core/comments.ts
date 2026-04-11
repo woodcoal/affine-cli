@@ -6,7 +6,6 @@
 import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId } from '../utils/config.js';
 import {
-	wsUrlFromGraphQLEndpoint,
 	connectWorkspaceSocket,
 	joinWorkspace,
 	loadDoc,
@@ -417,15 +416,7 @@ export async function createCommentHandler(params: {
 	// 如果有 selection 参数，需要在文档中添加评论标记
 	if (params.selection && comment.id) {
 		try {
-			await addCommentMarkToDocument(
-				workspaceId,
-				params.docId,
-				gql.endpoint,
-				gql.cookie,
-				gql.bearer,
-				params.selection,
-				comment.id
-			);
+			await addCommentMarkToDocument(workspaceId, params.docId, params.selection, comment.id);
 		} catch (err) {
 			console.error('添加评论标记失败:', err);
 		}
@@ -453,14 +444,10 @@ export async function createCommentHandler(params: {
 async function addCommentMarkToDocument(
 	workspaceId: string,
 	docId: string,
-	endpoint: string,
-	cookie: string,
-	bearer: string,
 	selection: string,
 	commentId: string
 ): Promise<void> {
-	const wsUrl = wsUrlFromGraphQLEndpoint(endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, cookie, bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -693,14 +680,7 @@ export async function deleteCommentHandler(params: {
 	// 如果找到了 docId，先移除文档中的评论标记
 	if (docId) {
 		try {
-			await removeCommentMarkFromDocument(
-				workspaceId,
-				docId,
-				gql.endpoint,
-				gql.cookie,
-				gql.bearer,
-				params.id
-			);
+			await removeCommentMarkFromDocument(workspaceId, docId, params.id);
 		} catch (err) {
 			console.error('移除评论标记失败:', err);
 		}
@@ -799,13 +779,9 @@ async function findCommentDocId(
 async function removeCommentMarkFromDocument(
 	workspaceId: string,
 	docId: string,
-	endpoint: string,
-	cookie: string,
-	bearer: string,
 	commentId: string
 ): Promise<void> {
-	const wsUrl = wsUrlFromGraphQLEndpoint(endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, cookie, bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

@@ -7,7 +7,6 @@ import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId, getBaseUrl } from '../utils/config.js';
 import { createDocFromMarkdownCore, collectDocForMarkdown } from '../utils/docsUtil.js';
 import {
-	wsUrlFromGraphQLEndpoint,
 	getWorkspaceDocInfo,
 	connectWorkspaceSocket,
 	joinWorkspace,
@@ -87,8 +86,7 @@ export async function docListHandler(params: {
 	});
 
 	const docs = data.workspace.docs;
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const pagesInfo = await getWorkspaceDocInfo(wsUrl, workspaceId, gql.cookie, gql.bearer);
+	const pagesInfo = await getWorkspaceDocInfo(workspaceId);
 
 	const edges = docs.edges.map((edge: any) => {
 		const pageInfo = pagesInfo.get(edge.node.id);
@@ -138,7 +136,6 @@ export async function docInfoHandler(params: {
 }): Promise<any> {
 	const gql = await createGraphQLClient();
 	const workspaceId = getWorkspaceId(params.workspace);
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
 
 	const query = `query GetDoc($workspaceId: String!, $docId: String!) {
     workspace(id: $workspaceId) {
@@ -166,7 +163,7 @@ export async function docInfoHandler(params: {
 		throw new Error(`文档 ${params.id} 不存在`);
 	}
 
-	const pagesInfo = await getWorkspaceDocInfo(wsUrl, workspaceId, gql.cookie, gql.bearer);
+	const pagesInfo = await getWorkspaceDocInfo(workspaceId);
 	const pageInfo = pagesInfo.get(params.id);
 
 	const result: any = {
@@ -189,7 +186,7 @@ export async function docInfoHandler(params: {
 	}
 
 	// 连接 WebSocket 获取文档内容
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -312,9 +309,7 @@ export async function docCreateHandler(params: {
  */
 export async function docDeleteHandler(params: { id: string; workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -391,9 +386,7 @@ export async function docCopyHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	const newDocId = generateId(12, 'doc');
 	const newTitle = params.title || '复制文档';
@@ -719,9 +712,7 @@ export async function docUpdateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -949,9 +940,7 @@ export async function docSearchHandler(params: {
 	tag?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	const limit = params.count || 20;
 	const query = (params.query || '').trim();
@@ -1101,9 +1090,7 @@ export async function docReplaceHandler(params: {
 	preview?: boolean;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	const searchText = params.search;
 	const replaceText = params.replace;
@@ -1324,9 +1311,7 @@ export async function docAppendHandler(params: {
 		};
 	}
 
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

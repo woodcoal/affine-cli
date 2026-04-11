@@ -11,10 +11,8 @@
  */
 
 import * as Y from 'yjs';
-import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId } from '../utils/config.js';
 import {
-	wsUrlFromGraphQLEndpoint,
 	connectWorkspaceSocket,
 	joinWorkspace,
 	loadDoc,
@@ -1038,9 +1036,7 @@ async function loadDatabaseDocContext(
 	docId: string,
 	databaseBlockId: string
 ): Promise<DatabaseDocContext> {
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 	await joinWorkspace(socket, workspaceId);
 	const doc = new Y.Doc();
 	const snapshot = await loadDoc(socket, workspaceId, docId);
@@ -2138,9 +2134,7 @@ export async function listDatabasesHandler(params: {
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
 	if (!workspaceId) throw new Error('workspaceId is required');
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -2245,9 +2239,7 @@ export async function createDatabaseHandler(params: {
 	const workspaceId = getWorkspaceId(params.workspace);
 	if (!workspaceId) throw new Error('workspaceId is required');
 
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	let targetDocId = params.docId;
 
@@ -2816,9 +2808,7 @@ export async function deleteDatabaseHandler(params: {
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
 	if (!workspaceId) throw new Error('workspaceId is required');
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -2949,9 +2939,7 @@ export async function insertDatabaseHandler(params: {
 		throw new Error('JSON 格式无效');
 	}
 
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

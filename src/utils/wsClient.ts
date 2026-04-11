@@ -23,6 +23,7 @@
 
 import { io, Socket } from 'socket.io-client';
 import * as Y from 'yjs';
+import { getApiConfig } from './config.js';
 
 const DEFAULT_WS_CLIENT_VERSION = '0.26.0';
 const WS_CONNECT_TIMEOUT_MS = 10000;
@@ -60,18 +61,17 @@ export function wsUrlFromGraphQLEndpoint(endpoint: string): string {
  * - 默认超时 10 秒
  * - 支持自定义认证头
  */
-export async function connectWorkspaceSocket(
-	wsUrl: string,
-	cookie?: string,
-	bearer?: string
-): Promise<Socket> {
+export async function connectWorkspaceSocket(): Promise<Socket> {
 	return new Promise((resolve, reject) => {
+		const { apiUrl, apiToken } = getApiConfig();
+
 		let settled = false;
 		const extraHeaders: Record<string, string> = {};
-		if (cookie) extraHeaders['Cookie'] = cookie;
-		if (bearer) extraHeaders['Authorization'] = `Bearer ${bearer}`;
+		// if (cookie) extraHeaders['Cookie'] = cookie;
+		if (apiToken) extraHeaders['Authorization'] = `Bearer ${apiToken}`;
 
-		const socket = io(wsUrl, {
+		const url = wsUrlFromGraphQLEndpoint(apiUrl);
+		const socket = io(url, {
 			transports: ['websocket'],
 			path: '/socket.io/',
 			extraHeaders: Object.keys(extraHeaders).length ? extraHeaders : undefined,
@@ -358,13 +358,8 @@ export function extractTagNames(
  * @param bearer - Bearer Token（可选）
  * @returns 文档信息 Map
  */
-export async function getWorkspaceDocInfo(
-	wsUrl: string,
-	workspaceId: string,
-	cookie?: string,
-	bearer?: string
-) {
-	const socket = await connectWorkspaceSocket(wsUrl, cookie, bearer);
+export async function getWorkspaceDocInfo(workspaceId: string) {
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

@@ -22,14 +22,7 @@
  */
 
 import * as Y from 'yjs';
-import { createGraphQLClient } from './graphqlClient.js';
-import {
-	wsUrlFromGraphQLEndpoint,
-	connectWorkspaceSocket,
-	joinWorkspace,
-	loadDoc,
-	pushDocUpdate
-} from './wsClient.js';
+import { connectWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from './wsClient.js';
 import { parseMarkdownToOperations } from '../markdown/parse.js';
 import type { MarkdownOperation, TextDelta } from '../markdown/types.js';
 import { SELECT_COLORS } from '../core/constants.js';
@@ -322,9 +315,7 @@ async function applyMarkdownOperationsInternal(
 	docId: string,
 	operations: MarkdownOperation[]
 ): Promise<{ appendedCount: number; skippedCount: number; blockIds: string[] }> {
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -436,9 +427,7 @@ async function createDocInternal(
 	title: string,
 	content?: string
 ): Promise<{ workspaceId: string; docId: string; title: string }> {
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -617,9 +606,7 @@ async function ensureTagOption(wsDoc: Y.Doc, tagName: string): Promise<string> {
  * 添加文档到文件夹
  */
 async function addDocToFolder(workspaceId: string, docId: string, folderId: string): Promise<void> {
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -782,9 +769,7 @@ export async function createDocFromMarkdownCore(parsed: {
 
 	// 添加标签到文档
 	if (tagNames.length > 0) {
-		const gql = await createGraphQLClient();
-		const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-		const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+		const socket = await connectWorkspaceSocket();
 
 		try {
 			await joinWorkspace(socket, workspaceId);
@@ -870,9 +855,7 @@ export async function createDocFromMarkdownCore(parsed: {
 	let linkedToParent = false;
 	if (parsed.parentDocId) {
 		try {
-			const gql = await createGraphQLClient();
-			const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-			const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+			const socket = await connectWorkspaceSocket();
 
 			try {
 				await joinWorkspace(socket, workspaceId);

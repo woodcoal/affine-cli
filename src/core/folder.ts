@@ -3,10 +3,8 @@
  * 处理文件夹的创建、列表、重命名、删除、添加/移动/移除文档等操作
  */
 
-import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId } from '../utils/config.js';
 import {
-	wsUrlFromGraphQLEndpoint,
 	connectWorkspaceSocket,
 	joinWorkspace,
 	loadDoc,
@@ -149,9 +147,7 @@ async function generateFractionalIndexingKeyBetween(
  */
 export async function folderAllHandler(params: { workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -198,9 +194,7 @@ export async function folderListHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -219,7 +213,7 @@ export async function folderListHandler(params: {
 			? children.filter((node: any) => node.type === 'folder' || node.type === 'tag')
 			: children.filter((node: any) => node.type === 'doc');
 
-		const pagesInfo = await getWorkspaceDocInfo(wsUrl, workspaceId, gql.cookie, gql.bearer);
+		const pagesInfo = await getWorkspaceDocInfo(workspaceId);
 
 		return filteredChildren.map((child: any) => {
 			const isFolderRef = child.type === 'tag';
@@ -260,9 +254,7 @@ export async function folderCreateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -320,9 +312,7 @@ export async function folderDeleteHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -376,9 +366,7 @@ export async function folderAddHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -442,9 +430,7 @@ export async function folderMoveHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -513,9 +499,7 @@ export async function folderRemoveHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -576,9 +560,7 @@ export async function folderUpdateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -636,9 +618,7 @@ export async function folderUpdateHandler(params: {
  */
 export async function folderClearHandler(params: { workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);

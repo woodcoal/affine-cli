@@ -4,10 +4,8 @@
  * 使用 WebSocket + Yjs 方式存储
  */
 
-import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId } from '../utils/config.js';
 import {
-	wsUrlFromGraphQLEndpoint,
 	connectWorkspaceSocket,
 	joinWorkspace,
 	loadDoc,
@@ -245,9 +243,7 @@ function getStringArray(value: unknown): string[] {
  */
 export async function tagsListHandler(params: { workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -330,9 +326,7 @@ export async function tagsCreateHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 
 	try {
@@ -415,9 +409,7 @@ export async function tagsDocAddHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 
 	try {
@@ -509,9 +501,7 @@ export async function tagsDocRemoveHandler(params: {
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 
 	try {
@@ -584,9 +574,7 @@ export async function tagsDocRemoveHandler(params: {
  */
 export async function tagsDeleteHandler(params: { tag: string; workspace?: string }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 
 	try {
@@ -663,9 +651,7 @@ export async function tagsDocListHandler(params: {
 	ignoreCase?: boolean;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
-	const gql = await createGraphQLClient();
-	const wsUrl = wsUrlFromGraphQLEndpoint(gql.endpoint);
-	const socket = await connectWorkspaceSocket(wsUrl, gql.cookie, gql.bearer);
+	const socket = await connectWorkspaceSocket();
 	const tag = normalizeTag(params.tag);
 	const ignoreCase = params.ignoreCase ?? true;
 

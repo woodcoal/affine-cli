@@ -23,7 +23,15 @@ try {
 // 2. 创建输出目录
 mkdirSync('dist', { recursive: true });
 
-// 3. 使用 esbuild 打包
+// 3. 类型检查
+console.log('🔍 类型检查...');
+try {
+	execSync('tsc --noEmit -p tsconfig.json', { stdio: 'inherit' });
+} catch (e) {
+	console.log('⚠️  类型检查有警告，继续打包...');
+}
+
+// 4. 使用 esbuild 打包
 console.log('📦 打包为单文件...');
 await esbuild.build({
 	entryPoints: ['src/index.ts'],
