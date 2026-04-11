@@ -190,15 +190,7 @@ function mergeWarnings(...sources: string[][]): string[] {
 /**
  * 创建 Block
  */
-function createBlock(
-	type: string,
-	text: string,
-	extra?: Record<string, any>
-): {
-	blockId: string;
-	block: Y.Map<any>;
-	flavour: string;
-} {
+function createBlock(type: string, text: string, extra?: Record<string, any>) {
 	const blockId = generateId(12, type);
 	const block = new Y.Map<any>();
 
@@ -319,7 +311,7 @@ function createBlock(
 		}
 	}
 
-	return { blockId, block, flavour: block.get('sys:flavour') };
+	return { blockId, block };
 }
 
 /**
