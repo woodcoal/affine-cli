@@ -1,10 +1,8 @@
 # Affine CLI
 
-## 概述
+[**【English】**](./README-en.md) | [**【中文】**](./README.md)
 
-Affine CLI 是一个轻量级的命令行工具，用于管理 Affine 文档、标签、文件夹、收藏夹、文件和数据库。它提供了通过命令行与 Affine（https://app.affine.pro）API 交互的简化接口。
-
-> **English Version**: [README-en.md](./README-en.md)
+Affine CLI 是一个轻量级的命令行工具，用于管理 Affine 文档、标签、文件夹、收藏夹、文件和数据库。它提供了通过命令行与 Affine（<https://app.affine.pro）API> 交互的简化接口。
 
 ## 功能特性
 
@@ -181,10 +179,10 @@ src/
 
 ## 许可证
 
-MIT © [The AFFiNE CLI Contributors](LICENSE) & [木炭 <woodcoal@qq.com>](https://github.com/woodcoal/affine-cli)
+MIT © [The AFFiNE CLI Contributors](LICENSE) & [木炭](https://github.com/woodcoal/affine-cli) <woodcoal@qq.com>
 
 ## 作者
 
 - **作者**: 木炭
-- **邮箱**: woodcoal@qq.com
-- **GitHub**: https://github.com/woodcoal/affine-cli
+- **邮箱**: <woodcoal@qq.com>
+- **GitHub**: <https://github.com/woodcoal/affine-cli>

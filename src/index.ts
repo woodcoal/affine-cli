@@ -19,7 +19,7 @@
  * - runCli: CLI 入口函数，供外部调用
  */
 
-import { CliModule, generateHelp, outputResult } from './utils/cliUtils.js';
+import { CliModule, generateHelp, outputResult, setOutputFormat } from './utils/cliUtils.js';
 
 /**
  * 导入的 CLI 模块（命令映射）
@@ -102,12 +102,15 @@ const CLI_MODULES: Record<string, CliModule> = {
  */
 function printMainHelp() {
 	const lines = [
-		'affine-cli 1.26.411 - Affine 基础版命令行工具',
+		`affine-cli ${CLI_VERSION} - Affine 基础版命令行工具`,
 		'',
 		'用法:',
 		'  affine-cli <模块> <操作> [选项]  运行模块命令',
 		'  affine-cli <模块> --help         显示模块帮助',
 		'  affine-cli help [模块]           显示帮助',
+		'',
+		'全局选项:',
+		'  --text                    输出文本格式（默认 JSON）',
 		'',
 		'模块:'
 	];
@@ -165,7 +168,25 @@ import { CLI_VERSION } from './utils/version.js';
  * - runCli(['--version'])
  */
 export async function runCli(args: string[]): Promise<boolean> {
-	const [command, ...remainingArgs] = args;
+	// 解析全局选项
+	const globalArgs = [...args];
+	let command: string | undefined;
+	let remainingArgs: string[] = [];
+
+	// 提取全局选项并过滤
+	const filteredArgs = globalArgs.filter((arg) => {
+		if (arg === '--text') {
+			setOutputFormat('text');
+			return false;
+		}
+		return true;
+	});
+
+	// 解析命令和参数
+	if (filteredArgs.length > 0) {
+		command = filteredArgs[0];
+		remainingArgs = filteredArgs.slice(1);
+	}
 
 // 版本信息
 	if (command === '--version' || command === '-v' || command === 'version') {

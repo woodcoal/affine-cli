@@ -1,10 +1,8 @@
 # Affine CLI
 
-## Overview
+[**【English】**](./README-en.md) | [**【中文】**](./README.md)
 
 Affine CLI is a lightweight command-line tool for managing Affine documents, tags, folders, collections, files, comments, and databases. It provides a streamlined interface for interacting with the Affine (https://app.affine.pro) API through the command line.
-
-> **中文版**: [README.md](./README.md)
 
 ## Features
 

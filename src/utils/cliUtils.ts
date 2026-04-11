@@ -118,6 +118,34 @@ export type CliModule = {
 	actions: Record<string, CliAction>;
 };
 
+/* ============================================================================
+ * 全局输出格式控制
+ * ============================================================================ */
+
+/**
+ * 全局输出格式变量
+ * 默认为 json 格式输出
+ */
+let outputFormat: 'text' | 'json' = 'json';
+
+/**
+ * setOutputFormat: 设置全局输出格式
+ *
+ * @param format - 输出格式（text/json）
+ */
+export function setOutputFormat(format: 'text' | 'json'): void {
+	outputFormat = format;
+}
+
+/**
+ * getOutputFormat: 获取全局输出格式
+ *
+ * @returns 当前输出格式
+ */
+export function getOutputFormat(): 'text' | 'json' {
+	return outputFormat;
+}
+
 /**
  * parseArgs: 解析命令行参数
  *
@@ -326,11 +354,12 @@ export function generateCommandMap(
  * formatOutput: 格式化输出
  *
  * @param data - 要格式化的数据
- * @param format - 输出格式（text/json），默认 text
+ * @param format - 输出格式（text/json），默认为全局设置或 text
  * @returns 格式化后的字符串
  */
-export function formatOutput(data: any, format: 'text' | 'json' = 'text'): string {
-	if (format === 'json') {
+export function formatOutput(data: any, format?: 'text' | 'json'): string {
+	const fmt = format || getOutputFormat();
+	if (fmt === 'json') {
 		return JSON.stringify(data, null, 2);
 	}
 
@@ -340,7 +369,19 @@ export function formatOutput(data: any, format: 'text' | 'json' = 'text'): strin
 
 	if (Array.isArray(data)) {
 		if (data.length === 0) return '(空)';
-		return data.map((item) => formatObject(item)).join('\n');
+		const lines: string[] = [];
+		data.forEach((item, idx) => {
+			if (typeof item === 'object' && item !== null) {
+				lines.push(`[${idx + 1}]`);
+				lines.push(formatObject(item, 1));
+				if (idx < data.length - 1) {
+					lines.push('');
+				}
+			} else {
+				lines.push(`[${idx + 1}]: ${item}`);
+			}
+		});
+		return lines.join('\n');
 	}
 
 	if (typeof data === 'object' && data !== null) {
@@ -355,6 +396,7 @@ export function formatOutput(data: any, format: 'text' | 'json' = 'text'): strin
  *
  * @param obj - 要格式化的对象
  * @param indent - 缩进级别
+ * @param isLast - 是否为最后一个元素
  * @returns 格式化后的文本
  */
 function formatObject(obj: any, indent = 0): string {
@@ -369,15 +411,40 @@ function formatObject(obj: any, indent = 0): string {
 	const prefix = '  '.repeat(indent);
 	const lines: string[] = [];
 
-	for (const [key, value] of Object.entries(obj)) {
-		if (value === null || value === undefined) continue;
-
-		if (typeof value === 'object') {
-			lines.push(`${prefix}${key}:`);
-			lines.push(formatObject(value, indent + 1));
-		} else {
-			lines.push(`${prefix}${key}: ${value}`);
+	if (Array.isArray(obj)) {
+		if (obj.length === 0) {
+			return '(空)';
 		}
+		obj.forEach((item, idx) => {
+			if (typeof item === 'object' && item !== null) {
+				lines.push(`${prefix}[${idx + 1}]`);
+				lines.push(formatObject(item, indent + 1));
+				if (idx < obj.length - 1) {
+					lines.push('');
+				}
+			} else {
+				lines.push(`${prefix}[${idx + 1}]: ${item}`);
+			}
+		});
+	} else {
+		const entries = Object.entries(obj).filter(([, value]) => value !== null && value !== undefined);
+		entries.forEach(([key, value]) => {
+			if (typeof value === 'object' && value !== null) {
+				if (Array.isArray(value)) {
+					if (value.length === 0) {
+						lines.push(`${prefix}${key}: (空)`);
+					} else {
+						lines.push(`${prefix}${key}:`);
+						lines.push(formatObject(value, indent + 1));
+					}
+				} else {
+					lines.push(`${prefix}${key}:`);
+					lines.push(formatObject(value, indent + 1));
+				}
+			} else {
+				lines.push(`${prefix}${key}: ${value}`);
+			}
+		});
 	}
 
 	return lines.join('\n');
@@ -388,18 +455,24 @@ function formatObject(obj: any, indent = 0): string {
  *
  * @param result - CommandResult 对象
  * @param exitCode - 退出码，默认 0
+ * @param forceFormat - 强制输出格式（可选，覆盖全局设置）
  *
  * 注意事项：
  * - 错误输出到 console.error
- * - 成功时输出 JSON 格式的 data
+ * - 成功时根据全局设置输出 JSON 或文本格式
  * - 使用 process.exit 退出进程
  */
-export function outputResult(result: CommandResult, exitCode = 0): void {
+export function outputResult(result: CommandResult, exitCode = 0, forceFormat?: 'text' | 'json'): void {
+	const format = forceFormat || getOutputFormat();
+
 	if (!result.success && result.error) {
 		console.error(result.error);
 	} else if (result.data !== undefined) {
-		// 默认输出 JSON 格式
-		console.log(JSON.stringify(result.data, null, 2));
+		if (format === 'json') {
+			console.log(JSON.stringify(result.data, null, 2));
+		} else {
+			console.log(formatOutput(result.data, 'text'));
+		}
 	} else if (result.output) {
 		console.log(result.output);
 	}
