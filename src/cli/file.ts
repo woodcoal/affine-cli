@@ -22,7 +22,7 @@ const fileCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'file',
-				short: 'p',
+				short: 'f',
 				description: '要上传的文件路径',
 				type: 'string'
 			},
@@ -71,6 +71,7 @@ const fileCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '要删除的附件 ID（Blob key）',
 				required: true,
 				type: 'string'

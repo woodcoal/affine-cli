@@ -11,7 +11,6 @@
  * - 本地配置：当前目录 .env
  */
 
-import { fetch } from 'undici';
 import * as readline from 'readline';
 import {
 	loadConfigFile,
@@ -21,14 +20,10 @@ import {
 	GLOBAL_CONFIG_FILE
 } from '../utils/config.js';
 import { loginWithPassword } from '../utils/auth.js';
+import { GraphQLClient } from '../utils/graphqlClient.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-
-/**
- * GraphQL 请求超时时间（毫秒）
- */
-const CLI_FETCH_TIMEOUT_MS = 30_000;
 
 /* ============================================================================
  * 交互式输入辅助函数
@@ -132,39 +127,16 @@ async function gql(
 	query: string,
 	variables?: Record<string, any>
 ): Promise<any> {
-	const headers: Record<string, string> = {
-		'Content-Type': 'application/json',
-		'User-Agent': 'affine-cli/1.26.411'
-	};
-	if (auth.token) headers.Authorization = `Bearer ${auth.token}`;
-	if (auth.cookie) headers.Cookie = auth.cookie;
-
-	const body: any = { query };
-	if (variables) body.variables = variables;
-
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), CLI_FETCH_TIMEOUT_MS);
-	let res;
-	try {
-		res = await fetch(`${baseUrl}/graphql`, {
-			method: 'POST',
-			headers,
-			body: JSON.stringify(body),
-			signal: controller.signal
-		});
-	} catch (err: any) {
-		if (err.name === 'AbortError') {
-			throw new Error(`请求超时 (${CLI_FETCH_TIMEOUT_MS / 1000}s)`);
-		}
-		throw err;
-	} finally {
-		clearTimeout(timer);
+	const headers: Record<string, string> = {};
+	if (auth.token) {
+		headers['Authorization'] = `Bearer ${auth.token}`;
+	}
+	if (auth.cookie) {
+		headers['Cookie'] = auth.cookie;
 	}
 
-	if (!res.ok) throw new Error(`HTTP ${res.status}`);
-	const json = (await res.json()) as any;
-	if (json.errors) throw new Error(json.errors.map((e: any) => e.message).join('; '));
-	return json.data;
+	const client = new GraphQLClient(`${baseUrl}/graphql`, headers);
+	return await client.request(query, variables);
 }
 
 /**
@@ -211,15 +183,7 @@ async function detectWorkspace(
 	}
 
 	console.error('检测工作区...');
-	const data = await gql(
-		baseUrl,
-		auth,
-		`query {
-      workspaces {
-        id createdAt
-      }
-    }`
-	);
+	const data = await gql(baseUrl, auth, `query {workspaces {id createdAt}}`);
 
 	const workspaces: any[] = data.workspaces;
 	if (workspaces.length === 0) {
@@ -305,7 +269,7 @@ export async function authLoginHandler(params: {
 		console.error('');
 	}
 
-	const defaultUrl = 'https://app.affine.pro';
+	const defaultUrl = existing.AFFINE_BASE_URL || 'https://app.affine.pro';
 	const rawUrl = params.url ?? ((await ask(`Affine URL [${defaultUrl}]: `)) || defaultUrl);
 	const baseUrl = validateBaseUrl(rawUrl);
 

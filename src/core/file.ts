@@ -165,13 +165,13 @@ export async function fileUploadHandler(params: {
 		success: true,
 		data: {
 			id: blobKey,
-			key: blobKey,
-			workspaceId,
+			// key: blobKey,
+			// workspaceId,
 			filename: safeFilename,
 			contentType: mime,
 			size: payload.length,
-			downloadUrl,
-			uploadedAt: new Date().toISOString()
+			downloadUrl
+			// uploadedAt: new Date().toISOString()
 		}
 	};
 }

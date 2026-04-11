@@ -14,6 +14,7 @@
 
 import { fetch } from 'undici';
 import { loadConfig } from './config.js';
+import { CLI_VERSION } from './version.js';
 
 const GRAPHQL_FETCH_TIMEOUT_MS = 30_000;
 
@@ -75,7 +76,7 @@ export class GraphQLClient {
 	async request<T>(query: string, variables?: Record<string, any>): Promise<T> {
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
-			'User-Agent': 'affine-cli/1.26.411',
+			'User-Agent': `affine-cli/${CLI_VERSION}`,
 			...this._headers
 		};
 
