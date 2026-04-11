@@ -14,7 +14,7 @@ import * as Y from 'yjs';
 import { getWorkspaceId } from '../utils/config.js';
 import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from '../utils/wsClient.js';
 import { generateId } from '../utils/misc.js';
-import { SELECT_COLORS } from './constants.js';
+import { TAG_COLORS } from './constants.js';
 
 /**
  * 数据库列定义类型
@@ -149,7 +149,7 @@ function createColumnDefinition(
 			const optId = generateId(8, 'opt');
 			optMap.set('id', optId);
 			optMap.set('value', options[i]);
-			optMap.set('color', SELECT_COLORS[i % SELECT_COLORS.length]);
+			optMap.set('color', TAG_COLORS[i % TAG_COLORS.length]);
 			opts.push([optMap]);
 		}
 		data.set('options', opts);
@@ -836,7 +836,7 @@ function resolveSelectOptionId(
 	const newOption = {
 		id: newId,
 		value: trimmed,
-		color: SELECT_COLORS[col.options.length % SELECT_COLORS.length]
+		color: TAG_COLORS[col.options.length % TAG_COLORS.length]
 	};
 	const data = col.raw?.get?.('data');
 	if (data instanceof Y.Map) {
@@ -2678,8 +2678,8 @@ export async function createDatabaseHandler(params: {
 									opt = {
 										id: optId,
 										value: strValue,
-										color: SELECT_COLORS[
-											colInfo.options.length % SELECT_COLORS.length
+										color: TAG_COLORS[
+											colInfo.options.length % TAG_COLORS.length
 										]
 									};
 									colInfo.options.push(opt);
@@ -2699,8 +2699,8 @@ export async function createDatabaseHandler(params: {
 										opt = {
 											id: optId,
 											value: strValue,
-											color: SELECT_COLORS[
-												colInfo.options.length % SELECT_COLORS.length
+											color: TAG_COLORS[
+												colInfo.options.length % TAG_COLORS.length
 											]
 										};
 										colInfo.options.push(opt);

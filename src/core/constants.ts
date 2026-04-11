@@ -1,24 +1,24 @@
 /**
  * 模块名称：constants.ts
  * 全局常量定义模块
- * 
+ *
  * 功能描述：
  * - 定义全局可复用的常量
  * - 包含标签颜色等 UI 相关常量
- * 
+ *
  * 导出的常量：
- * - SELECT_COLORS: 标签颜色数组
+ * - TAG_COLORS: 标签颜色数组
  */
 
 /**
- * SELECT_COLORS: 标签颜色数组（淡色系）
- * 
+ * TAG_COLORS: 标签颜色数组（淡色系）
+ *
  * 功能描述：
  * - 用于 select/multi-select 类型列的选项颜色分配
  * - 复用给 tags、docsUtil 等模块使用
  * - 采用淡雅柔和的颜色方案，适合视觉展示
  */
-export const SELECT_COLORS = [
+export const TAG_COLORS = [
 	'#60A5FA', // 淡蓝
 	'#34D399', // 淡绿
 	'#FBBF24', // 淡黄

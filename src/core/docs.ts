@@ -5,11 +5,8 @@
 
 import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId, getBaseUrl } from '../utils/config.js';
-import {
-	createDocFromMarkdownCore,
-	collectDocForMarkdown,
-	getWorkspaceTagOptions
-} from '../utils/docsUtil.js';
+import { createDocFromMarkdownCore, collectDocForMarkdown } from '../utils/docsUtil.js';
+import { getWorkspaceTagOptions } from '../core/tags.js';
 import {
 	getWorkspaceDocs,
 	createWorkspaceSocket,

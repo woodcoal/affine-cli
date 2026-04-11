@@ -16,7 +16,6 @@
  * - pushDocUpdate: 推送文档更新
  * - deleteDoc: 删除文档
  * - extractWorkspacePages: 提取页面元数据
- * - getWorkspaceTagOptions: 获取标签选项
  * - extractTagNames: 提取标签名称
  * - getWorkspaceDocs: 获取工作区文档信息
  */
@@ -24,7 +23,7 @@
 import { io, Socket } from 'socket.io-client';
 import * as Y from 'yjs';
 import { getApiConfig } from './config.js';
-import { getWorkspaceTagOptions } from './docsUtil.js';
+import { getWorkspaceTagOptions } from '../core/tags.js';
 
 const DEFAULT_WS_CLIENT_VERSION = '0.26.0';
 const WS_CONNECT_TIMEOUT_MS = 10000;

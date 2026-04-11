@@ -11,7 +11,6 @@
  * 导出的主要函数：
  * - createDocFromMarkdownCore: 从 Markdown 创建文档（核心函数）
  * - collectDocForMarkdown: 收集文档信息用于导出为 Markdown
- * - getWorkspaceTagOptions: 获取工作区标签选项
  *
  * 导出的辅助函数：
  * - findBlockIdByFlavour: 查找指定 flavour 的 block ID
@@ -25,8 +24,9 @@ import * as Y from 'yjs';
 import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from './wsClient.js';
 import { parseMarkdownToOperations } from '../markdown/parse.js';
 import type { MarkdownOperation, TextDelta } from '../markdown/types.js';
-import { SELECT_COLORS } from '../core/constants.js';
+import { TAG_COLORS } from '../core/constants.js';
 import { generateId } from './misc.js';
+import { getWorkspaceTagOptions, WorkspaceTagOption, getStringArray } from '../core/tags.js';
 
 /**
  * 获取 Block 版本号
@@ -542,10 +542,10 @@ async function createDocInternal(
 /**
  * TAG_OPTION_COLORS: 标签颜色列表
  *
- * 复用 database.ts 中的 SELECT_COLORS 颜色
+ * 复用 database.ts 中的 TAG_COLORS 颜色
  * 使用淡雅柔和的颜色方案，适合视觉展示
  */
-const TAG_OPTION_COLORS = SELECT_COLORS;
+const TAG_OPTION_COLORS = TAG_COLORS;
 
 /**
  * 获取或创建 Tag 选项
@@ -968,22 +968,6 @@ function getTagArray(meta: Y.Map<any>): string[] {
 }
 
 /**
- * 获取字符串数组
- */
-export function getStringArray(value: unknown): string[] {
-	if (!(value instanceof Y.Array)) {
-		return [];
-	}
-	const values: string[] = [];
-	value.forEach((entry: unknown) => {
-		if (typeof entry === 'string') {
-			values.push(entry);
-		}
-	});
-	return values;
-}
-
-/**
  * 将文本内容转换为字符串
  */
 export function asText(value: unknown): string {
@@ -1052,49 +1036,6 @@ function ensureChildrenArray(block: Y.Map<any>): Y.Array<any> {
 	const created = new Y.Array<any>();
 	block.set('sys:children', created);
 	return created;
-}
-
-/**
- * 标签选项类型
- */
-export type WorkspaceTagOption = {
-	id: string;
-	value: string;
-	color: string;
-	createDate: number | null;
-	updateDate: number | null;
-};
-
-/**
- * 获取工作区的标签选项
- */
-export function getWorkspaceTagOptions(meta: Y.Map<any>): WorkspaceTagOption[] {
-	const properties = meta.get('properties');
-	if (!properties || !(properties instanceof Y.Map)) return [];
-
-	const tags = properties.get('tags');
-	if (!tags || !(tags instanceof Y.Map)) return [];
-
-	const options = tags.get('options');
-	if (!options || !(options instanceof Y.Array)) return [];
-
-	const result: WorkspaceTagOption[] = [];
-	options.forEach((opt) => {
-		if (opt instanceof Y.Map) {
-			const id = opt.get('id');
-			const value = opt.get('value');
-			if (typeof id === 'string' && typeof value === 'string') {
-				result.push({
-					id,
-					value,
-					color: opt.get('color') || TAG_OPTION_COLORS[0],
-					createDate: opt.get('createDate') || null,
-					updateDate: opt.get('updateDate') || null
-				});
-			}
-		}
-	});
-	return result;
 }
 
 /**

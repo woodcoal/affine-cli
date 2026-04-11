@@ -45,16 +45,18 @@ const tagsCommands: Record<string, CommandConfig> = {
 	create: {
 		name: 'create',
 		description: '创建标签',
-		usage: 'create --tag <name> [--color <color>] [--workspace <workspace-id>]',
+		usage: 'create --name <name> [--color <color>] [--workspace <workspace-id>]',
 		args: [
 			{
-				name: 'tag',
+				name: 'name',
+				short: 'n',
 				description: '标签名称',
 				required: true,
 				type: 'string'
 			},
 			{
 				name: 'color',
+				short: 'c',
 				description: '标签颜色（如 #3B82F6）',
 				type: 'string'
 			},
@@ -67,7 +69,7 @@ const tagsCommands: Record<string, CommandConfig> = {
 		],
 		handler: tagsCreateHandler,
 		paramsMapper: (parsed) => ({
-			tag: parsed.tag,
+			name: parsed.name,
 			color: parsed.color,
 			workspace: parsed.workspace
 		})
@@ -75,7 +77,7 @@ const tagsCommands: Record<string, CommandConfig> = {
 	add: {
 		name: 'add',
 		description: '添加标签到文档',
-		usage: 'add -d <doc-id> --tag <name> [--workspace <workspace-id>]',
+		usage: 'add -d <doc-id> --tag <tag-name> [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'doc',
@@ -86,6 +88,7 @@ const tagsCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'tag',
+				short: 't',
 				description: '标签名称',
 				required: true,
 				type: 'string'
@@ -107,7 +110,7 @@ const tagsCommands: Record<string, CommandConfig> = {
 	remove: {
 		name: 'remove',
 		description: '从文档移除标签',
-		usage: 'remove -d <doc-id> --tag <name> [--workspace <workspace-id>]',
+		usage: 'remove -d <doc-id> --tag <tag-name> [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'doc',
@@ -118,6 +121,7 @@ const tagsCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'tag',
+				short: 't',
 				description: '标签名称',
 				required: true,
 				type: 'string'
@@ -139,10 +143,11 @@ const tagsCommands: Record<string, CommandConfig> = {
 	delete: {
 		name: 'delete',
 		description: '删除标签',
-		usage: 'delete --tag <name> [--workspace <workspace-id>]',
+		usage: 'delete --tag <tag-name> [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'tag',
+				short: 't',
 				description: '标签名称',
 				required: true,
 				type: 'string'
@@ -162,11 +167,12 @@ const tagsCommands: Record<string, CommandConfig> = {
 	},
 	info: {
 		name: 'info',
-		description: '获取指定标签的文档列表',
-		usage: 'info --tag <name> [--workspace <workspace-id>] [--ignore-case]',
+		description: '获取指定标签关联的文档列表',
+		usage: 'info --tag <tag-name> [--workspace <workspace-id>] [--ignore-case]',
 		args: [
 			{
 				name: 'tag',
+				short: 't',
 				description: '标签名称',
 				required: true,
 				type: 'string'
@@ -179,6 +185,7 @@ const tagsCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'ignore-case',
+				short: 'i',
 				description: '忽略大小写',
 				type: 'boolean'
 			}

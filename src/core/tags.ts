@@ -6,17 +6,20 @@
 
 import { getWorkspaceId } from '../utils/config.js';
 import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from '../utils/wsClient.js';
-import { SELECT_COLORS } from './constants.js';
+import { TAG_COLORS } from './constants.js';
 import * as Y from 'yjs';
 import { generateId } from '../utils/misc.js';
 
 /**
- * TAG_OPTION_COLORS: 标签颜色列表
- *
- * 复用 database.ts 中的 SELECT_COLORS 颜色
- * 使用淡雅柔和的颜色方案，适合视觉展示
+ * 标签选项类型
  */
-const TAG_OPTION_COLORS = SELECT_COLORS;
+export type WorkspaceTagOption = {
+	id: string;
+	value: string;
+	color: string;
+	createDate?: number;
+	updateDate?: number;
+};
 
 /**
  * normalizeTag: 规范化标签名称
@@ -38,20 +41,58 @@ function normalizeTag(tag: string): string {
  * @param meta - 工作区的 meta Y.Map
  * @returns 标签选项数组，若不存在则返回 null
  */
-function getTagOptionsArray(meta: Y.Map<any>): Y.Array<any> | null {
+function getTagOptionsArray(meta: Y.Map<any>) {
 	const properties = meta.get('properties');
-	if (!properties || !(properties instanceof Y.Map)) {
-		return null;
-	}
+	if (!properties || !(properties instanceof Y.Map)) return;
+
 	const tags = properties.get('tags');
-	if (!tags || !(tags instanceof Y.Map)) {
-		return null;
-	}
+	if (!tags || !(tags instanceof Y.Map)) return;
+
 	const options = tags.get('options');
-	if (!options || !(options instanceof Y.Array)) {
-		return null;
-	}
+	if (!options || !(options instanceof Y.Array)) return;
+
 	return options;
+}
+
+/**
+ * parseTagOption: 解析单个标签选项
+ *
+ * @param opt - 原始的 Y.Map 对象
+ * @returns 解析后的对象，包含 id、value、color；若解析失败返回 null
+ */
+function parseTagOption(opt: Y.Map<any>, index: number): WorkspaceTagOption | null {
+	if (opt && opt instanceof Y.Map) {
+		const id = opt.get('id');
+		const value = opt.get('value');
+		if (typeof id === 'string' && typeof value === 'string') {
+			return {
+				id,
+				value,
+				color: opt.get('color') || TAG_COLORS[index % TAG_COLORS.length],
+				createDate: opt.get('createDate'),
+				updateDate: opt.get('updateDate')
+			};
+		}
+	}
+
+	return null;
+}
+
+/**
+ * 获取工作区的标签选项
+ */
+export function getWorkspaceTagOptions(meta: Y.Map<any>) {
+	const opts = getTagOptionsArray(meta);
+	if (!opts) return [];
+
+	const tags: Array<WorkspaceTagOption> = [];
+
+	opts.forEach((opt: any, index: number) => {
+		const tag = parseTagOption(opt, index);
+		if (tag) tags.push(tag);
+	});
+
+	return tags;
 }
 
 /**
@@ -87,98 +128,6 @@ function ensureTagOptionsArray(meta: Y.Map<any>): Y.Array<any> {
 }
 
 /**
- * parseTagOption: 解析单个标签选项
- *
- * @param raw - 原始的 Y.Map 对象
- * @returns 解析后的对象，包含 id、value、color；若解析失败返回 null
- */
-function parseTagOption(raw: any): { id: string; value: string; color: string } | null {
-	if (!raw || !(raw instanceof Y.Map)) {
-		return null;
-	}
-	const id = raw.get('id');
-	const value = raw.get('value');
-	const color = raw.get('color');
-	if (typeof id !== 'string' || typeof value !== 'string') {
-		return null;
-	}
-	return {
-		id,
-		value,
-		color: typeof color === 'string' ? color : '#6B7280'
-	};
-}
-
-/**
- * getWorkspaceTagOptionList: 获取工作区标签选项列表
- *
- * 功能描述：
- * - 从 meta 中解析所有标签选项
- * - 返回包含 id、value、color 的对象数组
- *
- * @param meta - 工作区的 meta Y.Map
- * @returns 标签选项数组
- */
-function getWorkspaceTagOptionList(
-	meta: Y.Map<any>
-): Array<{ id: string; value: string; color: string }> {
-	const options = getTagOptionsArray(meta);
-	if (!options) {
-		return [];
-	}
-
-	const result: Array<{ id: string; value: string; color: string }> = [];
-	options.forEach((item: any) => {
-		const parsed = parseTagOption(item);
-		if (parsed) {
-			result.push(parsed);
-		}
-	});
-	return result;
-}
-
-// /**
-//  * getDocTagArray: 获取文档的标签数组
-//  *
-//  * @param doc - 文档的 Y.Doc 对象
-//  * @returns 标签 Y.Array<string>，若不存在则返回 null
-//  */
-// function getDocTagArray(doc: Y.Doc): Y.Array<string> | null {
-// 	const meta = doc.getMap('meta');
-// 	if (!meta) {
-// 		return null;
-// 	}
-// 	const tags = meta.get('tags');
-// 	if (!tags || !(tags instanceof Y.Array)) {
-// 		return null;
-// 	}
-// 	return tags as Y.Array<string>;
-// }
-
-// /**
-//  * ensureDocTagArray: 确保文档有标签数组
-//  *
-//  * @param doc - 文档的 Y.Doc 对象
-//  * @returns 标签 Y.Array<string>
-//  *
-//  * 注意事项：
-//  * - 如果文档没有 meta，抛出异常
-//  * - 如果 meta 中没有 tags，创建新的 Y.Array
-//  */
-// function ensureDocTagArray(doc: Y.Doc): Y.Array<string> {
-// 	const meta = doc.getMap('meta');
-// 	if (!meta) {
-// 		throw new Error('文档没有 meta');
-// 	}
-// 	let tags = meta.get('tags') as Y.Array<string> | undefined;
-// 	if (!tags) {
-// 		tags = new Y.Array<string>();
-// 		meta.set('tags', tags);
-// 	}
-// 	return tags;
-// }
-
-/**
  * getWorkspacePageEntries: 获取工作区页面条目列表
  *
  * @param wsMeta - 工作区的 meta Y.Map
@@ -208,7 +157,7 @@ function getWorkspacePageEntries(wsMeta: Y.Map<any>): Array<{ id: string; entry:
  * @param value - Y.Array 或其他值
  * @returns 字符串数组
  */
-function getStringArray(value: unknown): string[] {
+export function getStringArray(value: unknown): string[] {
 	if (!value || !(value instanceof Y.Array)) {
 		return [];
 	}
@@ -252,7 +201,7 @@ export async function tagsListHandler(params: { workspace?: string }): Promise<a
 		Y.applyUpdate(wsDoc, Buffer.from(snapshot.missing, 'base64'));
 		const meta = wsDoc.getMap('meta');
 		const pages = getWorkspacePageEntries(meta);
-		const tagOptions = getWorkspaceTagOptionList(meta);
+		const tagOptions = getWorkspaceTagOptions(meta);
 
 		const tagCounts = new Map<string, number>();
 		for (const option of tagOptions) {
@@ -288,8 +237,8 @@ export async function tagsListHandler(params: { workspace?: string }): Promise<a
 			});
 
 		return {
-			workspaceId,
-			totalTags: tags.length,
+			// workspaceId,
+			total: tags.length,
 			tags
 		};
 	} finally {
@@ -316,13 +265,13 @@ export async function tagsListHandler(params: { workspace?: string }): Promise<a
  * - 创建成功后返回标签的 id、value、color
  */
 export async function tagsCreateHandler(params: {
-	tag: string;
+	name: string;
 	color?: string;
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
 	const socket = await createWorkspaceSocket();
-	const tag = normalizeTag(params.tag);
+	const name = normalizeTag(params.name);
 
 	try {
 		await joinWorkspace(socket, workspaceId);
@@ -337,25 +286,24 @@ export async function tagsCreateHandler(params: {
 		const prevSV = Y.encodeStateVector(wsDoc);
 		const meta = wsDoc.getMap('meta');
 
-		const existingOptions = getWorkspaceTagOptionList(meta);
-		const existing = existingOptions.find((t) => t.value.toLowerCase() === tag.toLowerCase());
+		const existingOptions = getWorkspaceTagOptions(meta);
+		const existing = existingOptions.find((t) => t.value.toLowerCase() === name.toLowerCase());
 		if (existing) {
 			return {
 				workspaceId,
-				tag,
+				name,
 				created: false,
-				message: `标签 "${tag}" 已存在`
+				message: `标签 "${name}" 已存在`
 			};
 		}
 
 		const optionsArray = ensureTagOptionsArray(meta);
-		const color =
-			params.color || TAG_OPTION_COLORS[existingOptions.length % TAG_OPTION_COLORS.length];
+		const color = params.color || TAG_COLORS[existingOptions.length % TAG_COLORS.length];
 		const now = Date.now();
 
 		const optionMap = new Y.Map<any>();
 		optionMap.set('id', generateId(8, 'tag'));
-		optionMap.set('value', tag);
+		optionMap.set('value', name);
 		optionMap.set('color', color);
 		optionMap.set('createDate', now);
 		optionMap.set('updateDate', now);
@@ -371,10 +319,10 @@ export async function tagsCreateHandler(params: {
 
 		return {
 			success: true,
-			workspaceId,
-			tag,
-			color,
-			created: true
+			// workspaceId,
+			name,
+			color
+			// created: true
 		};
 	} finally {
 		socket.disconnect();
@@ -426,12 +374,12 @@ export async function tagsDocAddHandler(params: {
 			throw new Error(`文档 ${params.id} 不存在于工作区`);
 		}
 
-		const existingOptions = getWorkspaceTagOptionList(wsMeta);
+		const existingOptions = getWorkspaceTagOptions(wsMeta);
 		let tagOption = existingOptions.find((t) => t.value.toLowerCase() === tag.toLowerCase());
 
 		if (!tagOption) {
 			const optionsArray = ensureTagOptionsArray(wsMeta);
-			const color = TAG_OPTION_COLORS[existingOptions.length % TAG_OPTION_COLORS.length];
+			const color = TAG_COLORS[existingOptions.length % TAG_COLORS.length];
 			const now = Date.now();
 
 			const optionMap = new Y.Map<any>();
@@ -518,7 +466,7 @@ export async function tagsDocRemoveHandler(params: {
 			throw new Error(`文档 ${params.id} 不存在于工作区`);
 		}
 
-		const existingOptions = getWorkspaceTagOptionList(wsMeta);
+		const existingOptions = getWorkspaceTagOptions(wsMeta);
 		const tagOption = existingOptions.find((t) => t.value.toLowerCase() === tag.toLowerCase());
 		if (!tagOption) {
 			throw new Error(`标签 "${tag}" 不存在`);
@@ -593,7 +541,7 @@ export async function tagsDeleteHandler(params: { tag: string; workspace?: strin
 		let foundIndex = -1;
 		for (let i = 0; i < optionsArray.length; i++) {
 			const item = optionsArray.get(i);
-			const parsed = parseTagOption(item);
+			const parsed = parseTagOption(item, i);
 			if (parsed && parsed.value.toLowerCase() === tag.toLowerCase()) {
 				foundIndex = i;
 				break;
@@ -662,7 +610,7 @@ export async function tagsDocListHandler(params: {
 		Y.applyUpdate(wsDoc, Buffer.from(snapshot.missing, 'base64'));
 		const meta = wsDoc.getMap('meta');
 		const pages = getWorkspacePageEntries(meta);
-		const tagOptions = getWorkspaceTagOptionList(meta);
+		const tagOptions = getWorkspaceTagOptions(meta);
 
 		const tagOption = tagOptions.find((t) =>
 			ignoreCase ? t.value.toLowerCase() === tag.toLowerCase() : t.value === tag
@@ -690,10 +638,9 @@ export async function tagsDocListHandler(params: {
 			});
 
 		return {
-			workspaceId,
-			tag,
-			ignoreCase,
-			totalDocs: docs.length,
+			// tag,
+			// ignoreCase,
+			total: docs.length,
 			docs
 		};
 	} finally {
