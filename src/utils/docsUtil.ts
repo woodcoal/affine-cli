@@ -195,7 +195,7 @@ export type CreateDocResult = {
 /**
  * 设置 Block 的系统字段
  */
-function setSysFields(block: Y.Map<any>, blockId: string, flavour: string): void {
+export function setSysFields(block: Y.Map<any>, blockId: string, flavour: string): void {
 	block.set('sys:id', blockId);
 	block.set('sys:flavour', flavour);
 	block.set('sys:version', blockVersion(flavour));
@@ -204,7 +204,7 @@ function setSysFields(block: Y.Map<any>, blockId: string, flavour: string): void
 /**
  * 创建 Y.Text
  */
-function makeText(content: string | TextDelta[]): Y.Text {
+export function makeText(content: string | TextDelta[]): Y.Text {
 	const yText = new Y.Text();
 	if (typeof content === 'string') {
 		if (content.length > 0) {
@@ -226,7 +226,7 @@ function makeText(content: string | TextDelta[]): Y.Text {
 /**
  * 确保 Note Block 存在
  */
-function ensureNoteBlock(blocks: Y.Map<any>): string {
+export function ensureNoteBlock(blocks: Y.Map<any>): string {
 	const existingNoteId = findBlockIdByFlavour(blocks, 'affine:note');
 	if (existingNoteId) {
 		return existingNoteId;
@@ -2233,7 +2233,7 @@ export function findBlockById(blocks: Y.Map<any>, blockId: string): Y.Map<any> |
 /**
  * 确保子元素数组存在
  */
-function ensureChildrenArray(block: Y.Map<any>): Y.Array<any> {
+export function ensureChildrenArray(block: Y.Map<any>): Y.Array<any> {
 	const current = block.get('sys:children');
 	if (current instanceof Y.Array) return current;
 	const created = new Y.Array<any>();

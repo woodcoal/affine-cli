@@ -5,7 +5,7 @@
 
 import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId, getBaseUrl } from '../utils/config.js';
-import { createDocFromMarkdownCore, collectDocForMarkdown } from '../utils/docsUtil.js';
+import { createDocFromMarkdownCore, collectDocForMarkdown, findBlockById, ensureNoteBlock, ensureChildrenArray, markdownOperationToAppendInput, normalizeAppendBlockInput, createBlock } from '../utils/docsUtil.js';
 import { getWorkspaceTagOptions } from '../core/tags.js';
 import {
 	getWorkspaceDocs,
@@ -16,9 +16,8 @@ import {
 	extractTagNames
 } from '../utils/wsClient.js';
 import { renderBlocksToMarkdown } from '../markdown/render.js';
-import { generateId } from '../utils/misc.js';
 import { parseMarkdownToOperations } from '../markdown/parse.js';
-import type { MarkdownOperation } from '../markdown/types.js';
+import { generateId } from '../utils/misc.js';
 import * as fs from 'fs';
 import * as Y from 'yjs';
 
@@ -1326,25 +1325,30 @@ export async function docAppendHandler(params: {
 		const prevSV = Y.encodeStateVector(doc);
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
-		// 找到 note block 或 page block
+		// 找到或创建 note block
 		const noteId = ensureNoteBlock(blocks);
 		const noteBlock = findBlockById(blocks, noteId);
 		if (!noteBlock) {
 			throw new Error('无法解析 note block');
 		}
-
 		const noteChildren = ensureChildrenArray(noteBlock);
 
+		// 解析 Markdown 并转换为 blocks
 		let appendedCount = 0;
-		// const lastBlockId = getLastTextBlockId(noteChildren, blocks);
-
 		for (const operation of operations) {
-			const result = createBlockFromOperation(operation);
-			if (result) {
-				blocks.set(result.blockId, result.block);
-				noteChildren.push([result.blockId]);
-				appendedCount++;
+			const input = markdownOperationToAppendInput(operation, params.id, workspaceId);
+			const normalized = normalizeAppendBlockInput(input);
+			const result = createBlock(normalized);
+			blocks.set(result.blockId, result.block);
+			// 处理额外的 blocks（如 callout 内部的 text block）
+			if (result.extraBlocks) {
+				for (const extra of result.extraBlocks) {
+					blocks.set(extra.blockId, extra.block);
+				}
 			}
+			// 添加到 note block 的子元素
+			noteChildren.push([result.blockId]);
+			appendedCount++;
 		}
 
 		// 推送更新
@@ -1408,302 +1412,6 @@ export async function docAppendHandler(params: {
 // 	});
 // 	return ids;
 // }
-
-/**
- * ensureNoteBlock: 确保文档中存在 note block
- *
- * 功能描述：
- * - 检查文档中是否已存在 affine:note 类型的 block
- * - 若不存在，则创建一个新的 note block
- * - 将新 note block 添加到 page block 的子元素中
- *
- * @param blocks - 文档的所有 blocks 映射
- * @returns note block 的 ID
- *
- * 注意事项：
- * - 如果文档中没有 page block，抛出异常
- * - 新创建的 note block 包含默认属性：xywh、index、hidden、displayMode、background
- */
-function ensureNoteBlock(blocks: Y.Map<any>): string {
-	const existingNoteId = findBlockIdByFlavour(blocks, 'affine:note');
-	if (existingNoteId) {
-		return existingNoteId;
-	}
-
-	const pageId = findBlockIdByFlavour(blocks, 'affine:page');
-	if (!pageId) {
-		throw new Error('Document has no page block');
-	}
-
-	const noteId = generateId(12, 'note');
-	const note = new Y.Map<any>();
-	setSysFields(note, noteId, 'affine:note');
-	note.set('sys:parent', null);
-	note.set('sys:children', new Y.Array<string>());
-	note.set('prop:xywh', '[0,0,800,95]');
-	note.set('prop:index', 'a0');
-	note.set('prop:hidden', false);
-	note.set('prop:displayMode', 'both');
-	const background = new Y.Map<any>();
-	background.set('light', '#ffffff');
-	background.set('dark', '#252525');
-	note.set('prop:background', background);
-	blocks.set(noteId, note);
-
-	const page = blocks.get(pageId) as Y.Map<any>;
-	let pageChildren = page.get('sys:children') as Y.Array<string> | undefined;
-	if (!(pageChildren instanceof Y.Array)) {
-		pageChildren = new Y.Array<string>();
-		page.set('sys:children', pageChildren);
-	}
-	pageChildren.push([noteId]);
-	return noteId;
-}
-
-/**
- * findBlockIdByFlavour: 根据 flavour 查找 block ID
- *
- * @param blocks - 文档的所有 blocks 映射
- * @param flavour - block 类型（如 'affine:page', 'affine:note'）
- * @returns 找到的 block ID，若不存在则返回 null
- */
-function findBlockIdByFlavour(blocks: Y.Map<any>, flavour: string): string | null {
-	for (const [id, value] of blocks) {
-		if (value instanceof Y.Map && value.get('sys:flavour') === flavour) {
-			return String(id);
-		}
-	}
-	return null;
-}
-
-/**
- * findBlockById: 根据 ID 查找 block
- *
- * @param blocks - 文档的所有 blocks 映射
- * @param blockId - block 的 ID
- * @returns 找到的 Y.Map 对象，若不存在则返回 null
- */
-function findBlockById(blocks: Y.Map<any>, blockId: string): Y.Map<any> | null {
-	const value = blocks.get(blockId);
-	return value instanceof Y.Map ? value : null;
-}
-
-/**
- * ensureChildrenArray: 确保 block 拥有 children 数组
- *
- * @param block - 要检查的 block
- * @returns children Y.Array 对象
- *
- * 注意事项：
- * - 如果 block 已有 sys:children 且为 Y.Array，直接返回
- * - 否则创建新的 Y.Array 并设置到 block
- */
-function ensureChildrenArray(block: Y.Map<any>): Y.Array<any> {
-	const current = block.get('sys:children');
-	if (current instanceof Y.Array) return current;
-	const created = new Y.Array<any>();
-	block.set('sys:children', created);
-	return created;
-}
-
-/**
- * setSysFields: 设置 block 的系统字段
- *
- * @param block - 要设置的 block
- * @param blockId - block 的唯一 ID
- * @param flavour - block 的类型
- *
- * 注意事项：
- * - sys:id: block 的唯一标识
- * - sys:flavour: block 的类型（如 affine:page、affine:note）
- * - sys:version: block 版本，page 类型为 2，其他为 1
- */
-function setSysFields(block: Y.Map<any>, blockId: string, flavour: string): void {
-	block.set('sys:id', blockId);
-	block.set('sys:flavour', flavour);
-	block.set('sys:version', flavour === 'affine:page' ? 2 : 1);
-}
-
-/**
- * makeText: 创建 Y.Text 对象
- *
- * 功能描述：
- * - 将字符串或 deltas 数组转换为 Y.Text 对象
- * - 支持保留原始文本的属性信息
- *
- * @param content - 文本内容，可以是字符串或 deltas 数组
- * @returns 配置好的 Y.Text 对象
- */
-function makeText(content: string | any[]): Y.Text {
-	const yText = new Y.Text();
-	if (typeof content === 'string') {
-		if (content.length > 0) {
-			yText.insert(0, content);
-		}
-		return yText;
-	}
-	let offset = 0;
-	for (const delta of content) {
-		if (!delta.insert) continue;
-		yText.insert(offset, delta.insert, delta.attributes ? { ...delta.attributes } : {});
-		offset += delta.insert.length;
-	}
-	return yText;
-}
-
-/**
- * createBlockFromOperation: 根据 Markdown 操作创建 Yjs block
- *
- * 功能描述：
- * - 将 Markdown 解析操作转换为对应的 Y.Map block
- * - 支持多种 block 类型：heading、paragraph、quote、list、code、divider、callout、table、bookmark
- * - 每个 block 都会设置系统字段（id、flavour、version）和必要的属性
- *
- * @param operation - Markdown 操作对象，包含类型和内容信息
- * @param docId - 文档 ID
- * @param workspaceId - 工作区 ID
- * @param afterBlockId - 在哪个 block 之后插入（可选）
- * @returns 包含 blockId 和 block 的对象，若不支持该类型则返回 null
- *
- * 支持的 operation.type：
- * - heading: 标题块，包含层级（h1-h6）
- * - paragraph: 段落块
- * - quote: 引用块
- * - list: 列表块，支持有序/无序/任务列表
- * - code: 代码块，包含语言信息
- * - divider: 分割线
- * - callout: 提示块（带图标和背景色）
- * - table: 表格块，包含行列数和单元格数据
- * - bookmark: 书签块，包含 URL 和标题
- */
-function createBlockFromOperation(
-	operation: MarkdownOperation
-): { blockId: string; block: Y.Map<any> } | null {
-	const blockId = generateId(12, 'block');
-	const block = new Y.Map<any>();
-
-	switch (operation.type) {
-		case 'heading':
-		case 'paragraph': {
-			const flavour = 'affine:paragraph';
-			setSysFields(block, blockId, flavour);
-			block.set('sys:parent', null);
-			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:type', operation.type === 'heading' ? `h${operation.level}` : 'text');
-			block.set('prop:text', makeText(operation.text));
-			return { blockId, block };
-		}
-
-		case 'quote': {
-			setSysFields(block, blockId, 'affine:paragraph');
-			block.set('sys:parent', null);
-			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:type', 'quote');
-			block.set('prop:text', makeText(operation.text));
-			return { blockId, block };
-		}
-
-		case 'list': {
-			setSysFields(block, blockId, 'affine:list');
-			block.set('sys:parent', null);
-			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:type', operation.style);
-			block.set('prop:checked', operation.checked || false);
-			block.set('prop:text', makeText(operation.deltas || operation.text));
-			return { blockId, block };
-		}
-
-		case 'code': {
-			setSysFields(block, blockId, 'affine:code');
-			block.set('sys:parent', null);
-			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:language', operation.language || 'txt');
-			block.set('prop:text', makeText(operation.text));
-			return { blockId, block };
-		}
-
-		case 'divider': {
-			setSysFields(block, blockId, 'affine:divider');
-			block.set('sys:parent', null);
-			block.set('sys:children', new Y.Array<string>());
-			return { blockId, block };
-		}
-
-		case 'callout': {
-			setSysFields(block, blockId, 'affine:callout');
-			block.set('sys:parent', null);
-			const calloutChildren = new Y.Array<string>();
-			const textBlockId = generateId(12, 'para');
-			const textBlock = new Y.Map<any>();
-			setSysFields(textBlock, textBlockId, 'affine:paragraph');
-			textBlock.set('sys:parent', null);
-			textBlock.set('sys:children', new Y.Array<string>());
-			textBlock.set('prop:type', 'text');
-			textBlock.set('prop:text', makeText(operation.text));
-			calloutChildren.push([textBlockId]);
-			block.set('sys:children', calloutChildren);
-			block.set('prop:icon', { type: 'emoji', unicode: '💡' });
-			block.set('prop:backgroundColorName', 'grey');
-			// 还需要将 textBlock 添加到 blocks
-			// 但这里只能返回一个 block，所以 callout 需要特殊处理
-			return { blockId, block };
-		}
-
-		case 'table': {
-			setSysFields(block, blockId, 'affine:table');
-			block.set('sys:parent', null);
-			block.set('sys:children', new Y.Array<string>());
-			const rows = operation.rows || 2;
-			const cols = operation.columns || 2;
-			const tableData = operation.tableData || [];
-
-			const rowIds: string[] = [];
-			for (let i = 0; i < rows; i++) {
-				const rowId = generateId(12, 'row');
-				block.set(`prop:rows.${rowId}.rowId`, rowId);
-				block.set(`prop:rows.${rowId}.order`, `r${String(i).padStart(4, '0')}`);
-				rowIds.push(rowId);
-			}
-
-			const columnIds: string[] = [];
-			for (let i = 0; i < cols; i++) {
-				const columnId = generateId(12, 'col');
-				block.set(`prop:columns.${columnId}.columnId`, columnId);
-				block.set(`prop:columns.${columnId}.order`, `c${String(i).padStart(4, '0')}`);
-				columnIds.push(columnId);
-			}
-
-			for (let rowIndex = 0; rowIndex < rowIds.length; rowIndex += 1) {
-				const rowId = rowIds[rowIndex];
-				for (let colIndex = 0; colIndex < columnIds.length; colIndex += 1) {
-					const columnId = columnIds[colIndex];
-					const cellText = tableData[rowIndex]?.[colIndex] ?? '';
-					block.set(`prop:cells.${rowId}:${columnId}.text`, makeText(cellText));
-				}
-			}
-			return { blockId, block };
-		}
-
-		case 'bookmark': {
-			setSysFields(block, blockId, 'affine:bookmark');
-			block.set('sys:parent', null);
-			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:style', 'horizontal');
-			block.set('prop:url', operation.url);
-			block.set('prop:caption', operation.caption || null);
-			block.set('prop:description', null);
-			block.set('prop:icon', null);
-			block.set('prop:image', null);
-			block.set('prop:title', null);
-			block.set('prop:xywh', '[0,0,0,0]');
-			block.set('prop:index', 'a0');
-			return { blockId, block };
-		}
-
-		default:
-			return null;
-	}
-}
 
 /**
  * docPublishHandler: 发布文档（公开访问）
