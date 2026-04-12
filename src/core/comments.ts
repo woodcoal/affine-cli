@@ -5,7 +5,7 @@
 
 import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId } from '../utils/config.js';
-import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from '../utils/wsClient.js';
+import { createWorkspaceSocket, joinWorkspace, loadDoc, updateYDoc } from '../utils/wsClient.js';
 import { generateId } from '../utils/misc.js';
 import * as Y from 'yjs';
 
@@ -363,8 +363,7 @@ async function addCommentMarkToDocument(
 
 		if (modified) {
 			// 发送更新到服务器
-			const update = Y.encodeStateAsUpdate(yDoc);
-			await pushDocUpdate(socket, workspaceId, docId, Buffer.from(update).toString('base64'));
+			await updateYDoc(socket, workspaceId, docId, yDoc);
 		}
 	} finally {
 	}
@@ -705,8 +704,7 @@ async function removeCommentMarkFromDocument(
 
 		if (modified) {
 			// 发送更新到服务器
-			const update = Y.encodeStateAsUpdate(yDoc);
-			await pushDocUpdate(socket, workspaceId, docId, Buffer.from(update).toString('base64'));
+			await updateYDoc(socket, workspaceId, docId, yDoc);
 		}
 	} finally {
 	}

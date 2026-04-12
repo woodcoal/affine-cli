@@ -5,7 +5,7 @@
  */
 
 import { getWorkspaceId } from '../utils/config.js';
-import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from '../utils/wsClient.js';
+import { createWorkspaceSocket, joinWorkspace, fetchYDoc, updateYDoc } from '../utils/wsClient.js';
 import { TAG_COLORS } from './constants.js';
 import * as Y from 'yjs';
 import { generateId } from '../utils/misc.js';
@@ -191,14 +191,10 @@ export async function tagsListHandler(params: { workspace?: string }): Promise<a
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		if (!snapshot.missing) {
+		const { doc: wsDoc, exists: snapshotExists } = await fetchYDoc(socket, workspaceId, workspaceId);
+		if (!snapshotExists) {
 			return { workspaceId, totalTags: 0, tags: [] };
 		}
-
-		const wsDoc = new Y.Doc();
-		Y.applyUpdate(wsDoc, Buffer.from(snapshot.missing, 'base64'));
 		const meta = wsDoc.getMap('meta');
 		const pages = getWorkspacePageEntries(meta);
 		const tagOptions = getWorkspaceTagOptions(meta);
@@ -274,15 +270,10 @@ export async function tagsCreateHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		if (!snapshot.missing) {
+		const { doc: wsDoc, exists: snapshotExists, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, workspaceId);
+		if (!snapshotExists) {
 			throw new Error(`工作区根文档不存在`);
 		}
-
-		const wsDoc = new Y.Doc();
-		Y.applyUpdate(wsDoc, Buffer.from(snapshot.missing, 'base64'));
-		const prevSV = Y.encodeStateVector(wsDoc);
 		const meta = wsDoc.getMap('meta');
 
 		const existingOptions = getWorkspaceTagOptions(meta);
@@ -308,13 +299,7 @@ export async function tagsCreateHandler(params: {
 		optionMap.set('updateDate', now);
 		optionsArray.push([optionMap]);
 
-		const delta = Y.encodeStateAsUpdate(wsDoc, prevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, wsDoc, prevSV);
 
 		return {
 			success: true,
@@ -356,14 +341,10 @@ export async function tagsDocAddHandler(params: {
 	try {
 		await joinWorkspace(socket, workspaceId);
 
-		const wsSnapshot = await loadDoc(socket, workspaceId, workspaceId);
-		if (!wsSnapshot.missing) {
+		const { doc: wsDoc, exists: wsSnapshotExists, prevSV: wsPrevSV } = await fetchYDoc(socket, workspaceId, workspaceId);
+		if (!wsSnapshotExists) {
 			throw new Error(`工作区根文档不存在`);
 		}
-
-		const wsDoc = new Y.Doc();
-		Y.applyUpdate(wsDoc, Buffer.from(wsSnapshot.missing, 'base64'));
-		const wsPrevSV = Y.encodeStateVector(wsDoc);
 		const wsMeta = wsDoc.getMap('meta');
 
 		const pages = getWorkspacePageEntries(wsMeta);
@@ -403,13 +384,7 @@ export async function tagsDocAddHandler(params: {
 			page.entry.set('tags', newTags);
 		}
 
-		const delta = Y.encodeStateAsUpdate(wsDoc, wsPrevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, wsDoc, wsPrevSV);
 
 		return {
 			success: true,
@@ -447,14 +422,10 @@ export async function tagsDocRemoveHandler(params: {
 	try {
 		await joinWorkspace(socket, workspaceId);
 
-		const wsSnapshot = await loadDoc(socket, workspaceId, workspaceId);
-		if (!wsSnapshot.missing) {
+		const { doc: wsDoc, exists: wsSnapshotExists, prevSV: wsPrevSV } = await fetchYDoc(socket, workspaceId, workspaceId);
+		if (!wsSnapshotExists) {
 			throw new Error(`工作区根文档不存在`);
 		}
-
-		const wsDoc = new Y.Doc();
-		Y.applyUpdate(wsDoc, Buffer.from(wsSnapshot.missing, 'base64'));
-		const wsPrevSV = Y.encodeStateVector(wsDoc);
 		const wsMeta = wsDoc.getMap('meta');
 
 		const pages = getWorkspacePageEntries(wsMeta);
@@ -479,13 +450,7 @@ export async function tagsDocRemoveHandler(params: {
 			}
 		}
 
-		const delta = Y.encodeStateAsUpdate(wsDoc, wsPrevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, wsDoc, wsPrevSV);
 
 		return {
 			success: true,
@@ -518,15 +483,10 @@ export async function tagsDeleteHandler(params: { tag: string; workspace?: strin
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		if (!snapshot.missing) {
+		const { doc: wsDoc, exists: snapshotExists, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, workspaceId);
+		if (!snapshotExists) {
 			throw new Error(`工作区根文档不存在`);
 		}
-
-		const wsDoc = new Y.Doc();
-		Y.applyUpdate(wsDoc, Buffer.from(snapshot.missing, 'base64'));
-		const prevSV = Y.encodeStateVector(wsDoc);
 		const meta = wsDoc.getMap('meta');
 
 		const optionsArray = getTagOptionsArray(meta);
@@ -550,13 +510,7 @@ export async function tagsDeleteHandler(params: { tag: string; workspace?: strin
 
 		optionsArray.delete(foundIndex, 1);
 
-		const delta = Y.encodeStateAsUpdate(wsDoc, prevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, wsDoc, prevSV);
 
 		return {
 			success: true,
@@ -595,14 +549,10 @@ export async function tagsDocListHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		if (!snapshot.missing) {
+		const { doc: wsDoc, exists: snapshotExists } = await fetchYDoc(socket, workspaceId, workspaceId);
+		if (!snapshotExists) {
 			return { workspaceId, tag, ignoreCase, totalDocs: 0, docs: [] };
 		}
-
-		const wsDoc = new Y.Doc();
-		Y.applyUpdate(wsDoc, Buffer.from(snapshot.missing, 'base64'));
 		const meta = wsDoc.getMap('meta');
 		const pages = getWorkspacePageEntries(meta);
 		const tagOptions = getWorkspaceTagOptions(meta);

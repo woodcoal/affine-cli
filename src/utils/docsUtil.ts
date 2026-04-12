@@ -21,7 +21,7 @@
  */
 
 import * as Y from 'yjs';
-import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from './wsClient.js';
+import { createWorkspaceSocket, joinWorkspace, loadDoc, fetchYDoc, updateYDoc } from './wsClient.js';
 import { parseMarkdownToOperations } from '../markdown/parse.js';
 import type { MarkdownOperation, TextDelta } from '../markdown/types.js';
 import { TAG_COLORS } from '../core/constants.js';
@@ -976,13 +976,7 @@ async function applyMarkdownOperationsInternal(parsed: {
 				skippedCount += 1;
 			}
 		}
-		const delta = Y.encodeStateAsUpdate(doc, prevSV);
-		await pushDocUpdate(
-			socket,
-			parsed.workspaceId,
-			parsed.docId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(socket, parsed.workspaceId, parsed.docId, doc, prevSV);
 		return { appendedCount: blockIds.length, skippedCount, blockIds };
 	} finally {
 	}
@@ -1749,8 +1743,7 @@ async function createDocInternal(
 		meta.set('tags', new Y.Array());
 
 		// 推送文档更新
-		const updateFull = Y.encodeStateAsUpdate(ydoc);
-		await pushDocUpdate(socket, workspaceId, docId, Buffer.from(updateFull).toString('base64'));
+		await updateYDoc(socket, workspaceId, docId, ydoc);
 
 		// 更新工作区元数据
 		const wsDoc = new Y.Doc();
@@ -1772,13 +1765,7 @@ async function createDocInternal(
 		entry.set('tags', new Y.Array());
 		pages.push([entry as any]);
 
-		const wsDelta = Y.encodeStateAsUpdate(wsDoc, prevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(wsDelta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, wsDoc, prevSV);
 
 		return { workspaceId, docId, title: docTitle };
 	} finally {
@@ -1901,13 +1888,7 @@ async function addDocToFolder(workspaceId: string, docId: string, folderId: stri
 		record.set('parentId', folderId);
 		record.set('index', String(maxIndex + 1));
 
-		const update = Y.encodeStateAsUpdate(foldersDoc);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			foldersDocId,
-			Buffer.from(update).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, foldersDocId, foldersDoc);
 	} finally {
 	}
 }
@@ -1921,13 +1902,7 @@ export async function appendBlockInternal(parsed: AppendBlockInput) {
 	try {
 		await joinWorkspace(socket, workspaceId);
 
-		const doc = new Y.Doc();
-		const snapshot = await loadDoc(socket, workspaceId, normalized.docId);
-		if (snapshot.missing) {
-			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		}
-
-		const prevSV = Y.encodeStateVector(doc);
+		const { doc: doc, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, normalized.docId);
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 		const context = resolveInsertContext(blocks, normalized);
 		const { blockId, block, flavour, blockType, extraBlocks } = createBlock(normalized);
@@ -1944,13 +1919,7 @@ export async function appendBlockInternal(parsed: AppendBlockInput) {
 			context.children.insert(context.insertIndex, [blockId]);
 		}
 
-		const delta = Y.encodeStateAsUpdate(doc, prevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			normalized.docId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, normalized.docId, doc, prevSV);
 
 		return {
 			appended: true,
@@ -2020,13 +1989,7 @@ export async function createDocFromMarkdownCore(parsed: {
 			await joinWorkspace(socket, workspaceId);
 
 			// 加载工作区文档
-			const wsDoc = new Y.Doc();
-			const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-			if (snapshot.missing) {
-				Y.applyUpdate(wsDoc, Buffer.from(snapshot.missing, 'base64'));
-			}
-
-			const prevSV = Y.encodeStateVector(wsDoc);
+			const { doc: wsDoc, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, workspaceId);
 			const wsMeta = wsDoc.getMap('meta');
 			const pages = wsMeta.get('pages') as Y.Array<Y.Map<any>> | undefined;
 
@@ -2060,13 +2023,7 @@ export async function createDocFromMarkdownCore(parsed: {
 			}
 
 			// 推送更新
-			const delta = Y.encodeStateAsUpdate(wsDoc, prevSV);
-			await pushDocUpdate(
-				socket,
-				workspaceId,
-				workspaceId,
-				Buffer.from(delta).toString('base64')
-			);
+			await updateYDoc(socket, workspaceId, workspaceId, wsDoc, prevSV);
 		} finally {
 		}
 	}

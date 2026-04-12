@@ -12,7 +12,8 @@ import {
 	createWorkspaceSocket,
 	joinWorkspace,
 	loadDoc,
-	pushDocUpdate,
+	fetchYDoc,
+	updateYDoc,
 	extractTagNames
 } from '../utils/wsClient.js';
 import { renderBlocksToMarkdown } from '../markdown/render.js';
@@ -320,13 +321,7 @@ export async function docDeleteHandler(params: { id: string; workspace?: string 
 			}
 		}
 
-		const wsDelta = Y.encodeStateAsUpdate(wsDoc, prevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(wsDelta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, wsDoc, prevSV);
 
 		return {
 			success: true,
@@ -386,13 +381,10 @@ export async function docCopyHandler(params: {
 			sourceFolderId = await getDocFolderId(socket, workspaceId, params.id);
 		}
 
-		const sourceSnapshot = await loadDoc(socket, workspaceId, params.id);
-		if (!sourceSnapshot.missing) {
+		const { doc: sourceDoc, exists: sourceSnapshotExists } = await fetchYDoc(socket, workspaceId, params.id);
+		if (!sourceSnapshotExists) {
 			throw new Error('源文档不存在');
 		}
-
-		const sourceDoc = new Y.Doc();
-		Y.applyUpdate(sourceDoc, Buffer.from(sourceSnapshot.missing, 'base64'));
 		const sourceUpdate = Y.encodeStateAsUpdate(sourceDoc);
 
 		const newDoc = new Y.Doc();
@@ -418,20 +410,9 @@ export async function docCopyHandler(params: {
 		meta.set('title', newTitle);
 		meta.set('createDate', Date.now());
 
-		const updateFull = Y.encodeStateAsUpdate(newDoc);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			newDocId,
-			Buffer.from(updateFull).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, newDocId, newDoc);
 
-		const wsDoc = new Y.Doc();
-		const wsSnapshot = await loadDoc(socket, workspaceId, workspaceId);
-		if (wsSnapshot.missing) {
-			Y.applyUpdate(wsDoc, Buffer.from(wsSnapshot.missing, 'base64'));
-		}
-		const prevSV = Y.encodeStateVector(wsDoc);
+		const { doc: wsDoc, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, workspaceId);
 		const wsMeta = wsDoc.getMap('meta');
 
 		let pages = wsMeta.get('pages') as Y.Array<Y.Map<any>> | undefined;
@@ -459,13 +440,7 @@ export async function docCopyHandler(params: {
 		}
 		pages.push([entry as any]);
 
-		const wsDelta = Y.encodeStateAsUpdate(wsDoc, prevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(wsDelta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, wsDoc, prevSV);
 
 		// 如果没有指定 folder，则继承源文档的文件夹；否则添加到指定文件夹
 		const targetFolderId = params.folder || sourceFolderId;
@@ -566,12 +541,7 @@ async function getDocFolderId(
 	docId: string
 ): Promise<string | null> {
 	const docId_special = `db$${workspaceId}$folders`;
-	const snapshot = await loadDoc(socket, workspaceId, docId_special);
-
-	const doc = new Y.Doc();
-	if (snapshot.missing) {
-		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-	}
+	const { doc: doc } = await fetchYDoc(socket, workspaceId, docId_special);
 
 	// const nodes: any[] = [];
 	for (const key of doc.share.keys()) {
@@ -618,12 +588,7 @@ async function addDocToFolder(
 	folderId: string
 ): Promise<void> {
 	const docId_special = `db$${workspaceId}$folders`;
-	const snapshot = await loadDoc(socket, workspaceId, docId_special);
-
-	const doc = new Y.Doc();
-	if (snapshot.missing) {
-		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-	}
+	const { doc: doc } = await fetchYDoc(socket, workspaceId, docId_special);
 
 	const nodes: any[] = [];
 	for (const key of doc.share.keys()) {
@@ -658,8 +623,7 @@ async function addDocToFolder(
 	record.set('parentId', folderId);
 	record.set('index', String(maxIndex + 1));
 
-	const update = Y.encodeStateAsUpdate(doc);
-	await pushDocUpdate(socket, workspaceId, docId_special, Buffer.from(update).toString('base64'));
+	await updateYDoc(socket, workspaceId, docId_special, doc);
 }
 
 /**
@@ -720,13 +684,7 @@ export async function docUpdateHandler(params: {
 						}
 					});
 				}
-				const delta = Y.encodeStateAsUpdate(wsDoc, prevSV);
-				await pushDocUpdate(
-					socket,
-					workspaceId,
-					workspaceId,
-					Buffer.from(delta).toString('base64')
-				);
+				await updateYDoc(socket, workspaceId, workspaceId, wsDoc, prevSV);
 			}
 
 			// 更新文档本身的标题
@@ -745,13 +703,7 @@ export async function docUpdateHandler(params: {
 						break;
 					}
 				}
-				const delta = Y.encodeStateAsUpdate(doc, prevSV);
-				await pushDocUpdate(
-					socket,
-					workspaceId,
-					params.id,
-					Buffer.from(delta).toString('base64')
-				);
+				await updateYDoc(socket, workspaceId, params.id, doc, prevSV);
 			}
 
 			results.push('标题已更新');
@@ -764,12 +716,7 @@ export async function docUpdateHandler(params: {
 
 			// 添加到新文件夹
 			const foldersDocId = `db$${workspaceId}$folders`;
-			const foldersDoc = new Y.Doc();
-			const foldersSnap = await loadDoc(socket, workspaceId, foldersDocId);
-
-			if (foldersSnap.missing) {
-				Y.applyUpdate(foldersDoc, Buffer.from(foldersSnap.missing, 'base64'));
-			}
+			const { doc: foldersDoc } = await fetchYDoc(socket, workspaceId, foldersDocId);
 
 			const nodes: any[] = [];
 			for (const key of foldersDoc.share.keys()) {
@@ -806,13 +753,7 @@ export async function docUpdateHandler(params: {
 			record.set('parentId', params.folder);
 			record.set('index', String(maxIndex + 1));
 
-			const update = Y.encodeStateAsUpdate(foldersDoc);
-			await pushDocUpdate(
-				socket,
-				workspaceId,
-				foldersDocId,
-				Buffer.from(update).toString('base64')
-			);
+			await updateYDoc(socket, workspaceId, foldersDocId, foldersDoc);
 
 			results.push('文件夹已更新');
 		}
@@ -854,12 +795,7 @@ async function removeDocFromAllFolders(
 	docId: string
 ): Promise<void> {
 	const foldersDocId = `db$${workspaceId}$folders`;
-	const foldersDoc = new Y.Doc();
-	const foldersSnap = await loadDoc(socket, workspaceId, foldersDocId);
-
-	if (foldersSnap.missing) {
-		Y.applyUpdate(foldersDoc, Buffer.from(foldersSnap.missing, 'base64'));
-	}
+	const { doc: foldersDoc } = await fetchYDoc(socket, workspaceId, foldersDocId);
 
 	let hasChanges = false;
 
@@ -879,13 +815,7 @@ async function removeDocFromAllFolders(
 	}
 
 	if (hasChanges) {
-		const update = Y.encodeStateAsUpdate(foldersDoc);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			foldersDocId,
-			Buffer.from(update).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, foldersDocId, foldersDoc);
 	}
 }
 
@@ -959,16 +889,13 @@ export async function docSearchHandler(params: {
 		await joinWorkspace(socket, workspaceId);
 
 		// 获取工作区元数据
-		const wsSnap = await loadDoc(socket, workspaceId, workspaceId);
-		if (!wsSnap.missing) {
+		const { doc: wsDoc, exists: wsSnapExists } = await fetchYDoc(socket, workspaceId, workspaceId);
+		if (!wsSnapExists) {
 			return {
 				totalCount: 0,
 				documents: []
 			};
 		}
-
-		const wsDoc = new Y.Doc();
-		Y.applyUpdate(wsDoc, Buffer.from(wsSnap.missing, 'base64'));
 		const wsMeta = wsDoc.getMap('meta');
 		const pages = wsMeta.get('pages') as Y.Array<Y.Map<any>> | undefined;
 
@@ -1084,14 +1011,10 @@ export async function docReplaceHandler(params: {
 		await joinWorkspace(socket, workspaceId);
 
 		// 加载文档
-		const snap = await loadDoc(socket, workspaceId, params.id);
-		if (!snap.missing) {
+		const { doc: doc, exists: snapExists, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, params.id);
+		if (!snapExists) {
 			throw new Error(`文档 ${params.id} 不存在`);
 		}
-
-		const doc = new Y.Doc();
-		Y.applyUpdate(doc, Buffer.from(snap.missing, 'base64'));
-		const prevSV = Y.encodeStateVector(doc);
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
 		let replaceCount = 0;
@@ -1202,13 +1125,7 @@ export async function docReplaceHandler(params: {
 
 		// 如果不是预览模式，推送更新
 		if (!params.preview && replaceCount > 0) {
-			const delta = Y.encodeStateAsUpdate(doc, prevSV);
-			await pushDocUpdate(
-				socket,
-				workspaceId,
-				params.id,
-				Buffer.from(delta).toString('base64')
-			);
+			await updateYDoc(socket, workspaceId, params.id, doc, prevSV);
 		}
 
 		return {
@@ -1309,14 +1226,10 @@ export async function docAppendHandler(params: {
 		}
 
 		// 加载文档
-		const snap = await loadDoc(socket, workspaceId, params.id);
-		if (!snap.missing) {
+		const { doc: doc, exists: snapExists, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, params.id);
+		if (!snapExists) {
 			throw new Error(`文档 ${params.id} 不存在`);
 		}
-
-		const doc = new Y.Doc();
-		Y.applyUpdate(doc, Buffer.from(snap.missing, 'base64'));
-		const prevSV = Y.encodeStateVector(doc);
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
 		// 找到或创建 note block
@@ -1346,8 +1259,7 @@ export async function docAppendHandler(params: {
 		}
 
 		// 推送更新
-		const delta = Y.encodeStateAsUpdate(doc, prevSV);
-		await pushDocUpdate(socket, workspaceId, params.id, Buffer.from(delta).toString('base64'));
+		await updateYDoc(socket, workspaceId, params.id, doc, prevSV);
 
 		return {
 			success: true,

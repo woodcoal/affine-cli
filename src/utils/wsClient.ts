@@ -328,12 +328,7 @@ export async function getWorkspaceDocs(workspaceId: string) {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		const doc = new Y.Doc();
-		if (snapshot.missing) {
-			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		}
+		const { doc } = await fetchYDoc(socket, workspaceId, workspaceId);
 
 		const meta = doc.getMap('meta');
 		const tagOptions = getWorkspaceTagOptions(meta);
@@ -357,3 +352,72 @@ export async function getWorkspaceDocs(workspaceId: string) {
 	} finally {
 	}
 }
+
+/**
+ * fetchYDoc: 加载文档快照并初始化 Y.Doc
+ *
+ * 功能描述：
+ * - 从服务器加载指定文档的快照数据
+ * - 创建并初始化 Y.Doc 实例
+ * - 计算并返回初始的状态向量，用于后续增量更新
+ *
+ * @param socket - WebSocket 连接对象
+ * @param workspaceId - 工作区 ID
+ * @param docId - 文档 ID
+ * @returns 包含 Y.Doc 实例 (doc)、是否已存在快照 (exists)、以及初始的状态向量 (prevSV)
+ */
+export async function fetchYDoc(
+	socket: Socket,
+	workspaceId: string,
+	docId: string
+): Promise<{ doc: Y.Doc; exists: boolean; prevSV: Uint8Array }> {
+	const snapshot = await loadDoc(socket, workspaceId, docId);
+	const doc = new Y.Doc();
+	const exists = !snapshot.missing;
+	if (snapshot.missing) {
+		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
+	}
+	const prevSV = Y.encodeStateVector(doc);
+	return { doc, exists, prevSV };
+}
+
+/**
+ * updateYDoc: 推送 Y.Doc 的更新到服务器
+ *
+ * 功能描述：
+ * - 根据前一个状态向量 (prevSV) 计算 Y.Doc 的增量更新
+ * - 将增量更新转换为 Base64 格式并推送到服务器
+ *
+ * @param socket - WebSocket 连接对象
+ * @param workspaceId - 工作区 ID
+ * @param docId - 文档 ID
+ * @param doc - Y.Doc 实例
+ * @param prevSV - 前一个状态向量，用于计算增量
+ * @returns 更新时间戳
+ */
+export async function updateYDoc(
+	socket: Socket,
+	workspaceId: string,
+	docId: string,
+	doc: Y.Doc,
+	prevSV?: Uint8Array
+): Promise<number> {
+	const update = prevSV ? Y.encodeStateAsUpdate(doc, prevSV) : Y.encodeStateAsUpdate(doc);
+	return pushDocUpdate(socket, workspaceId, docId, Buffer.from(update).toString('base64'));
+}
+
+/**
+ * getSpecialWorkspaceDocId: 生成工作区特殊文档 ID
+ *
+ * 功能描述：
+ * - Affine 使用特殊的文档 ID 格式来存储工作区的附加数据
+ * - 格式：db${workspaceId}${tableName}
+ *
+ * @param workspaceId - 工作区 ID
+ * @param tableName - 表名（如 'folders'）
+ * @returns 特殊文档 ID 字符串
+ */
+export function getSpecialWorkspaceDocId(workspaceId: string, tableName: string): string {
+	return `db$${workspaceId}$${tableName}`;
+}
+

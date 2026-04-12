@@ -8,8 +8,8 @@ import { getWorkspaceId } from '../utils/config.js';
 import {
 	createWorkspaceSocket,
 	joinWorkspace,
-	loadDoc,
-	pushDocUpdate,
+	fetchYDoc,
+	updateYDoc,
 	getWorkspaceDocs
 } from '../utils/wsClient.js';
 import * as Y from 'yjs';
@@ -119,12 +119,7 @@ export async function collectionListHandler(params: { workspace?: string }): Pro
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		const doc = new Y.Doc();
-		if (snapshot.missing) {
-			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		}
+		const { doc: doc } = await fetchYDoc(socket, workspaceId, workspaceId);
 
 		const setting = doc.getMap('setting');
 		const current = setting.get('collections');
@@ -161,12 +156,7 @@ export async function collectionInfoHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		const doc = new Y.Doc();
-		if (snapshot.missing) {
-			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		}
+		const { doc: doc } = await fetchYDoc(socket, workspaceId, workspaceId);
 
 		const setting = doc.getMap('setting');
 		const current = setting.get('collections');
@@ -218,12 +208,7 @@ export async function collectionCreateHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		const doc = new Y.Doc();
-		if (snapshot.missing) {
-			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		}
+		const { doc: doc } = await fetchYDoc(socket, workspaceId, workspaceId);
 
 		const setting = doc.getMap('setting');
 		let current = setting.get('collections') as Y.Array<any> | undefined;
@@ -243,13 +228,7 @@ export async function collectionCreateHandler(params: {
 
 		current.push([collection]);
 
-		const update = Y.encodeStateAsUpdate(doc);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(update).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, doc);
 
 		return {
 			success: true,
@@ -282,12 +261,7 @@ export async function collectionUpdateHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		const doc = new Y.Doc();
-		if (snapshot.missing) {
-			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		}
+		const { doc: doc } = await fetchYDoc(socket, workspaceId, workspaceId);
 
 		const setting = doc.getMap('setting');
 		const current = setting.get('collections');
@@ -313,13 +287,7 @@ export async function collectionUpdateHandler(params: {
 			current.insert(index, [next]);
 		});
 
-		const update = Y.encodeStateAsUpdate(doc);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(update).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, doc);
 
 		return {
 			success: true,
@@ -349,12 +317,7 @@ export async function collectionDeleteHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		const doc = new Y.Doc();
-		if (snapshot.missing) {
-			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		}
+		const { doc: doc } = await fetchYDoc(socket, workspaceId, workspaceId);
 
 		const setting = doc.getMap('setting');
 		const current = setting.get('collections');
@@ -367,13 +330,7 @@ export async function collectionDeleteHandler(params: {
 		}
 		current.delete(index, 1);
 
-		const update = Y.encodeStateAsUpdate(doc);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(update).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, doc);
 
 		return {
 			success: true,
@@ -406,12 +363,7 @@ export async function collectionAddHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		const doc = new Y.Doc();
-		if (snapshot.missing) {
-			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		}
+		const { doc: doc } = await fetchYDoc(socket, workspaceId, workspaceId);
 
 		const setting = doc.getMap('setting');
 		const current = setting.get('collections');
@@ -436,13 +388,7 @@ export async function collectionAddHandler(params: {
 			current.insert(index, [next]);
 		});
 
-		const update = Y.encodeStateAsUpdate(doc);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(update).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, doc);
 
 		return {
 			success: true,
@@ -474,12 +420,7 @@ export async function collectionRemoveHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-
-		const doc = new Y.Doc();
-		if (snapshot.missing) {
-			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		}
+		const { doc: doc } = await fetchYDoc(socket, workspaceId, workspaceId);
 
 		const setting = doc.getMap('setting');
 		const current = setting.get('collections');
@@ -504,13 +445,7 @@ export async function collectionRemoveHandler(params: {
 			current.insert(index, [next]);
 		});
 
-		const update = Y.encodeStateAsUpdate(doc);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			workspaceId,
-			Buffer.from(update).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, workspaceId, doc);
 
 		return {
 			success: true,

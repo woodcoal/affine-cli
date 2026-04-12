@@ -12,7 +12,7 @@
 
 import * as Y from 'yjs';
 import { getWorkspaceId } from '../utils/config.js';
-import { createWorkspaceSocket, joinWorkspace, loadDoc, pushDocUpdate } from '../utils/wsClient.js';
+import { createWorkspaceSocket, joinWorkspace, loadDoc, fetchYDoc, updateYDoc } from '../utils/wsClient.js';
 import { generateId } from '../utils/misc.js';
 import { TAG_COLORS } from './constants.js';
 
@@ -1651,13 +1651,7 @@ export async function removeDatabaseRowHandler(params: {
 			throw new Error('必须指定 row-id 或 filter 参数');
 		}
 
-		const delta = Y.encodeStateAsUpdate(ctx.doc, ctx.prevSV);
-		await pushDocUpdate(
-			ctx.socket,
-			workspaceId,
-			params.docId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(ctx.socket, workspaceId, params.docId, ctx.doc, ctx.prevSV);
 
 		return {
 			deleted: deletedCount,
@@ -2075,13 +2069,7 @@ export async function updateDatabaseRowHandler(params: {
 			throw new Error('必须指定 row-id 或 filter 参数');
 		}
 
-		const delta = Y.encodeStateAsUpdate(ctx.doc, ctx.prevSV);
-		await pushDocUpdate(
-			ctx.socket,
-			workspaceId,
-			params.docId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(ctx.socket, workspaceId, params.docId, ctx.doc, ctx.prevSV);
 
 		return {
 			updated: updatedCount,
@@ -2122,13 +2110,10 @@ export async function listDatabasesHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, params.docId);
-		if (!snapshot.missing) {
+		const { doc: doc, exists: snapshotExists } = await fetchYDoc(socket, workspaceId, params.docId);
+		if (!snapshotExists) {
 			throw new Error('Document not found');
 		}
-
-		const doc = new Y.Doc();
-		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
 		const databases: Array<{
@@ -2300,21 +2285,10 @@ export async function createDatabaseHandler(params: {
 			meta.set('createDate', Date.now());
 			meta.set('tags', new Y.Array<string>());
 
-			const delta = Y.encodeStateAsUpdate(newDoc, prevSV);
-			await pushDocUpdate(
-				socket,
-				workspaceId,
-				newDocId,
-				Buffer.from(delta).toString('base64')
-			);
+			await updateYDoc(socket, workspaceId, newDocId, newDoc, prevSV);
 
 			// 更新 workspace 的 pages 列表
-			const wsDoc = new Y.Doc();
-			const wsSnapshot = await loadDoc(socket, workspaceId, workspaceId);
-			if (wsSnapshot.missing) {
-				Y.applyUpdate(wsDoc, Buffer.from(wsSnapshot.missing, 'base64'));
-			}
-			const wsPrevSV = Y.encodeStateVector(wsDoc);
+			const { doc: wsDoc, prevSV: wsPrevSV } = await fetchYDoc(socket, workspaceId, workspaceId);
 			const wsMeta = wsDoc.getMap('meta');
 			let pages = wsMeta.get('pages') as Y.Array<Y.Map<any>> | undefined;
 			if (!pages) {
@@ -2327,26 +2301,16 @@ export async function createDatabaseHandler(params: {
 			entry.set('createDate', Date.now());
 			entry.set('tags', new Y.Array<string>());
 			pages.push([entry as any]);
-			const wsDelta = Y.encodeStateAsUpdate(wsDoc, wsPrevSV);
-			await pushDocUpdate(
-				socket,
-				workspaceId,
-				workspaceId,
-				Buffer.from(wsDelta).toString('base64')
-			);
+			await updateYDoc(socket, workspaceId, workspaceId, wsDoc, wsPrevSV);
 
 			targetDocId = newDocId;
 		}
 
 		// 获取目标文档
-		const snapshot = await loadDoc(socket, workspaceId, targetDocId);
-		if (!snapshot.missing) {
+		const { doc: doc, exists: snapshotExists, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, targetDocId);
+		if (!snapshotExists) {
 			throw new Error('Document not found');
 		}
-
-		const doc = new Y.Doc();
-		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		const prevSV = Y.encodeStateVector(doc);
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
 		// 生成数据库 block
@@ -2744,13 +2708,7 @@ export async function createDatabaseHandler(params: {
 		}
 
 		// 推送更新
-		const delta = Y.encodeStateAsUpdate(doc, prevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			targetDocId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, targetDocId, doc, prevSV);
 
 		return {
 			created: true,
@@ -2794,14 +2752,10 @@ export async function deleteDatabaseHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, params.docId);
-		if (!snapshot.missing) {
+		const { doc: doc, exists: snapshotExists, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, params.docId);
+		if (!snapshotExists) {
 			throw new Error('Document not found');
 		}
-
-		const doc = new Y.Doc();
-		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		const prevSV = Y.encodeStateVector(doc);
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
 		// 检查数据库是否存在
@@ -2861,13 +2815,7 @@ export async function deleteDatabaseHandler(params: {
 		}
 
 		// 推送更新
-		const delta = Y.encodeStateAsUpdate(doc, prevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			params.docId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, params.docId, doc, prevSV);
 
 		return {
 			deleted: true,
@@ -2924,14 +2872,10 @@ export async function insertDatabaseHandler(params: {
 
 	try {
 		await joinWorkspace(socket, workspaceId);
-		const snapshot = await loadDoc(socket, workspaceId, params.docId);
-		if (!snapshot.missing) {
+		const { doc: doc, exists: snapshotExists, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, params.docId);
+		if (!snapshotExists) {
 			throw new Error('Document not found');
 		}
-
-		const doc = new Y.Doc();
-		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
-		const prevSV = Y.encodeStateVector(doc);
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
 		// 获取数据库
@@ -3095,13 +3039,7 @@ export async function insertDatabaseHandler(params: {
 		}
 
 		// 推送更新
-		const delta = Y.encodeStateAsUpdate(doc, prevSV);
-		await pushDocUpdate(
-			socket,
-			workspaceId,
-			params.docId,
-			Buffer.from(delta).toString('base64')
-		);
+		await updateYDoc(socket, workspaceId, params.docId, doc, prevSV);
 
 		return {
 			imported: importedCount,
