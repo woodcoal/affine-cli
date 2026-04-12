@@ -196,7 +196,7 @@ const docCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'icon',
-				short: 'i',
+				short: 'I',
 				description: '文档图标（emoji 字符，如 🎯、📝、💡）',
 				type: 'string'
 			},

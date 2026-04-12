@@ -92,7 +92,7 @@ const journalCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'icon',
-				short: 'i',
+				short: 'I',
 				description: '日记图标（emoji 字符，如 🎯、📝、💡）',
 				type: 'string'
 			},
