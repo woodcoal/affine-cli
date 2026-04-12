@@ -23,7 +23,7 @@ import * as fs from 'fs';
 import * as Y from 'yjs';
 
 /**
- * docListHandler: 列出工作区中的文档
+ * docAllHandler: 列出工作区所有文档，包含已删除的文档记录
  *
  * 功能描述：
  * - 通过 GraphQL API 获取文档列表
@@ -40,7 +40,7 @@ import * as Y from 'yjs';
  * - 文档标题优先使用 WebSocket 实时获取的标题，若无则使用 GraphQL 返回的标题
  * - 若两者都没有标题，返回 '未命名文档'
  */
-export async function docListHandler(params: {
+export async function docAllHandler(params: {
 	count?: number;
 	skip?: number;
 	after?: string;
@@ -66,8 +66,6 @@ export async function docListHandler(params: {
           node {
             id
             workspaceId
-            title
-            summary
             public
             defaultRole
             createdAt
@@ -94,16 +92,17 @@ export async function docListHandler(params: {
 			cursor: edge.cursor,
 			node: {
 				...edge.node,
-				title: pageInfo?.title || edge.node.title || '未命名文档'
+				title: pageInfo?.title || '',
+				deleted: !pageInfo
 			}
 		};
 	});
 
 	return {
-		totalCount: docs.totalCount,
+		total: docs.totalCount,
 		hasNextPage: docs.pageInfo.hasNextPage,
 		endCursor: docs.pageInfo.endCursor,
-		documents: edges.map((e: any) => e.node)
+		docs: edges.map((e: any) => e.node)
 	};
 }
 
@@ -211,6 +210,8 @@ export async function docInfoHandler(params: {
 		if (snap.missing) {
 			const doc2 = new Y.Doc();
 			Y.applyUpdate(doc2, Buffer.from(snap.missing, 'base64'));
+
+			console.log('================================', doc2);
 
 			const collected = collectDocForMarkdown(doc2, tagOptionsById);
 

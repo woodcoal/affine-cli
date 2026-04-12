@@ -51,6 +51,7 @@ const collectionCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '收藏夹 ID',
 				required: true,
 				type: 'string'
@@ -100,6 +101,7 @@ const collectionCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '收藏夹 ID',
 				required: true,
 				type: 'string'
@@ -132,6 +134,7 @@ const collectionCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '收藏夹 ID',
 				required: true,
 				type: 'string'
@@ -156,6 +159,7 @@ const collectionCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '收藏夹 ID',
 				required: true,
 				type: 'string'
@@ -188,6 +192,7 @@ const collectionCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '收藏夹 ID',
 				required: true,
 				type: 'string'

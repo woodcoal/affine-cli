@@ -380,7 +380,7 @@ const databaseCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'view-mode',
-				short: 'vm',
+				short: 'm',
 				description: '视图模式（table/kanban）',
 				type: 'string'
 			},

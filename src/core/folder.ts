@@ -688,8 +688,8 @@ export async function folderClearHandler(params: { workspace?: string }): Promis
 
 		return {
 			success: true,
-			deletedCount: deletedFolders.length,
-			deletedFolders
+			total: deletedFolders.length,
+			folers: deletedFolders
 		};
 	} finally {
 		socket.disconnect();

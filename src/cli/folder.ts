@@ -55,12 +55,14 @@ const folderCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '文件夹 ID',
 				required: true,
 				type: 'string'
 			},
 			{
 				name: 'folder',
+				short: 'f',
 				description: '仅返回文件夹列表，不设置默认返回文档列表',
 				type: 'boolean'
 			},
@@ -123,6 +125,7 @@ const folderCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '文件夹 ID',
 				required: true,
 				type: 'string'
@@ -147,6 +150,7 @@ const folderCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '文件夹 ID',
 				required: true,
 				type: 'string'
@@ -209,6 +213,7 @@ const folderCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '文件夹 ID',
 				required: true,
 				type: 'string'
@@ -247,6 +252,7 @@ const folderCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '目标文件夹 ID',
 				required: true,
 				type: 'string'
@@ -279,6 +285,7 @@ const folderCommands: Record<string, CommandConfig> = {
 		args: [
 			{
 				name: 'id',
+				short: 'i',
 				description: '文件夹 ID',
 				required: true,
 				type: 'string'

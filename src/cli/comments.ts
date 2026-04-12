@@ -50,6 +50,7 @@ const commentsCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'offset',
+				short: 'o',
 				description: '偏移量',
 				type: 'number'
 			},
@@ -108,6 +109,7 @@ const commentsCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'doc-mode',
+				short: 'm',
 				description: '文档模式 (page/edgeless)',
 				type: 'string'
 			}

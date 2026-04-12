@@ -8,7 +8,7 @@ import { convertToMarkdown } from '../utils/fileConverter.js';
 import { isFilePath } from '../utils/misc.js';
 
 import {
-	docListHandler,
+	docAllHandler,
 	docInfoHandler,
 	docCreateHandler,
 	docDeleteHandler,
@@ -48,17 +48,17 @@ function parseContentParam(contentValue?: string): string {
  */
 const docCommands: Record<string, CommandConfig> = {
 	/**
-	 * list 命令：列出工作区文档
-	 * 用法：list [--count <n>] [--skip <n>] [--after <cursor>] [--workspace <workspace-id>]
+	 * all 命令：列出工作区所有文档，包含已删除的文档记录
+	 * 用法：all [--count <n>] [--skip <n>] [--after <cursor>] [--workspace <workspace-id>]
 	 */
-	list: {
-		name: 'list',
-		description: '列出工作区文档（支持分页）',
-		usage: 'list [--count <n>] [--skip <n>] [--after <cursor>] [--workspace <workspace-id>]',
+	all: {
+		name: 'all',
+		description: '列出工作区所有文档，包含已删除的文档记录（支持分页）',
+		usage: 'all [--count <n>] [--skip <n>] [--after <cursor>] [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'count',
-				short: 'no',
+				short: 'c',
 				description: '每页返回数量（默认 50）',
 				type: 'number'
 			},
@@ -81,12 +81,47 @@ const docCommands: Record<string, CommandConfig> = {
 				type: 'string'
 			}
 		],
-		handler: docListHandler,
+		handler: docAllHandler,
 		paramsMapper: (parsed) => ({
 			count: parsed.count,
 			skip: parsed.skip,
 			after: parsed.after,
 			workspace: parsed.workspace
+		})
+	},
+	/**
+	 * list 命令：列出工作区所有文档
+	 * 用法：list [--count <n>] [--skip <n>] [--after <cursor>] [--workspace <workspace-id>]
+	 */
+	list: {
+		name: 'list',
+		description: '列出工作区所有文档（支持分页）',
+		usage: 'list [--workspace <workspace-id>]',
+		args: [
+			{
+				name: 'workspace',
+				short: 'w',
+				description: '工作区 ID（默认使用配置中的工作区）',
+				type: 'string'
+			},
+			{
+				name: 'count',
+				short: 'c',
+				description: '返回结果数量（默认 20）',
+				type: 'number'
+			},
+			{
+				name: 'tag',
+				short: 't',
+				description: '标签',
+				type: 'string'
+			}
+		],
+		handler: docSearchHandler,
+		paramsMapper: (parsed) => ({
+			workspace: parsed.workspace,
+			count: parsed.count,
+			tag: parsed.tag
 		})
 	},
 
@@ -199,7 +234,7 @@ const docCommands: Record<string, CommandConfig> = {
 			},
 			{
 				name: 'count',
-				short: 'no',
+				short: 'c',
 				description: '返回结果数量（默认 20）',
 				type: 'number'
 			},
