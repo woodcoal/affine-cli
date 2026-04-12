@@ -20,7 +20,8 @@ import {
 	markdownOperationToAppendInput,
 	normalizeAppendBlockInput,
 	createBlock,
-	resolveInsertContext
+	resolveInsertContext,
+	setDocEmojiIcon
 } from '../utils/docsUtil.js';
 import { renderBlocksToMarkdown } from '../markdown/render.js';
 import { parseMarkdownToOperations } from '../markdown/parse.js';
@@ -67,15 +68,26 @@ function isValidJournalString(value: unknown): value is string {
 }
 
 /**
- * formatJournalDate: 格式化日期为日记格式
+ * formatJournalDate: 格式化日期为日记格式（使用本地时区）
  */
 function formatJournalDate(date?: string | Date | number): string {
+	/**
+	 * 获取本地日期字符串（YYYY-MM-DD 格式）
+	 * 使用本地时区而非 UTC，确保日记日期与用户当地日期一致
+	 */
+	function getLocalDateString(d: Date): string {
+		const year = d.getFullYear();
+		const month = String(d.getMonth() + 1).padStart(2, '0');
+		const day = String(d.getDate()).padStart(2, '0');
+		return `${year}-${month}-${day}`;
+	}
+
 	if (!date) {
-		return new Date().toISOString().split('T')[0];
+		return getLocalDateString(new Date());
 	}
 
 	if (date instanceof Date) {
-		return date.toISOString().split('T')[0];
+		return getLocalDateString(date);
 	}
 
 	if (typeof date === 'string') {
@@ -84,15 +96,15 @@ function formatJournalDate(date?: string | Date | number): string {
 		}
 		const d = new Date(date);
 		if (!isNaN(d.getTime())) {
-			return d.toISOString().split('T')[0];
+			return getLocalDateString(d);
 		}
 	}
 
 	if (typeof date === 'number') {
-		return new Date(date).toISOString().split('T')[0];
+		return getLocalDateString(new Date(date));
 	}
 
-	return new Date().toISOString().split('T')[0];
+	return getLocalDateString(new Date());
 }
 
 /**
@@ -295,18 +307,22 @@ export async function journalCreateHandler(params: {
 	date?: string;
 	content?: string;
 	workspace?: string;
+	icon?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
 	const socket = await createWorkspaceSocket();
 
 	const journalDate = formatJournalDate(params.date);
-	const title = journalDate;
+	const title = params.icon ? `${params.icon} ${journalDate}` : journalDate;
 
 	try {
 		await joinWorkspace(socket, workspaceId);
 
 		const existingJournal = await findJournalByDate(socket, workspaceId, journalDate);
 		if (existingJournal) {
+			if (params.icon) {
+				await setDocEmojiIcon(workspaceId, existingJournal.id, params.icon);
+			}
 			return {
 				success: true,
 				exists: true,
@@ -327,10 +343,14 @@ export async function journalCreateHandler(params: {
 
 		await setJournalPropertyInDocProperties(socket, workspaceId, result.docId, journalDate);
 
+		if (params.icon) {
+			await setDocEmojiIcon(workspaceId, result.docId, params.icon);
+		}
+
 		return {
 			success: true,
 			exists: false,
-			message: `已创建日记 ${journalDate}`,
+			message: params.icon ? `已创建日记 ${journalDate}，图标: ${params.icon}` : `已创建日记 ${journalDate}`,
 			docId: result.docId,
 			title,
 			date: journalDate
@@ -538,6 +558,7 @@ export async function journalUpdateHandler(params: {
 	date?: string;
 	content?: string;
 	workspace?: string;
+	icon?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
 	const socket = await createWorkspaceSocket();
@@ -559,6 +580,10 @@ export async function journalUpdateHandler(params: {
 				throw new Error(`日期 ${journalDate} 的日记不存在，请先创建`);
 			}
 			targetDocId = journal.id;
+		}
+
+		if (params.icon) {
+			await setDocEmojiIcon(workspaceId, targetDocId, params.icon);
 		}
 
 		const {
@@ -651,7 +676,9 @@ export async function journalUpdateHandler(params: {
 
 		return {
 			success: true,
-			message: `已更新日记 ${targetDocId}`,
+			message: params.icon
+				? `已更新日记 ${targetDocId}，图标: ${params.icon}`
+				: `已更新日记 ${targetDocId}`,
 			docId: targetDocId
 		};
 	} finally {

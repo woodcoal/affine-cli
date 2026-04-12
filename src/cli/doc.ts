@@ -164,12 +164,12 @@ const docCommands: Record<string, CommandConfig> = {
 
 	/**
 	 * create 命令：创建文档
-	 * 用法：create --title <title> [--content <markdown|@file>] [--folder <folder-id>] [--tags <tag1,tag2>] [--workspace <workspace-id>]
+	 * 用法：create --title <title> [--content <markdown|@file>] [--folder <folder-id>] [--tags <tag1,tag2>] [--icon <emoji>] [--workspace <workspace-id>]
 	 */
 	create: {
 		name: 'create',
 		description: '创建新文档（支持从 Markdown 文件导入）',
-		usage: 'create --title <title> [--content <markdown|@file>] [--folder <folder-id>] [--tags <tag1,tag2>] [--workspace <workspace-id>]',
+		usage: 'create --title <title> [--content <markdown|@file>] [--folder <folder-id>] [--tags <tag1,tag2>] [--icon <emoji>] [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'title',
@@ -195,6 +195,12 @@ const docCommands: Record<string, CommandConfig> = {
 				type: 'string'
 			},
 			{
+				name: 'icon',
+				short: 'i',
+				description: '文档图标（emoji 字符，如 🎯、📝、💡）',
+				type: 'string'
+			},
+			{
 				name: 'workspace',
 				short: 'w',
 				description: '工作区 ID（默认使用配置中的工作区）',
@@ -207,6 +213,7 @@ const docCommands: Record<string, CommandConfig> = {
 			content: parseContentParam(parsed.content),
 			folder: parsed.folder,
 			tags: parsed.tags,
+			icon: parsed.icon,
 			workspace: parsed.workspace
 		})
 	},
@@ -344,12 +351,12 @@ const docCommands: Record<string, CommandConfig> = {
 
 	/**
 	 * update 命令：更新文档属性
-	 * 用法：update --id <doc-id> [--title <title>] [--parent <parent-id>] [--folder <folder-id>] [--workspace <workspace-id>]
+	 * 用法：update --id <doc-id> [--title <title>] [--parent <parent-id>] [--folder <folder-id>] [--icon <emoji>] [--workspace <workspace-id>]
 	 */
 	update: {
 		name: 'update',
-		description: '更新文档属性（标题、父子关系、文件夹）',
-		usage: 'update --id <doc-id> [--title <title>] [--parent <parent-id>] [--folder <folder-id>] [--workspace <workspace-id>]',
+		description: '更新文档属性（标题、父子关系、文件夹、图标）',
+		usage: 'update --id <doc-id> [--title <title>] [--parent <parent-id>] [--folder <folder-id>] [--icon <emoji>] [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'id',
@@ -377,6 +384,12 @@ const docCommands: Record<string, CommandConfig> = {
 				type: 'string'
 			},
 			{
+				name: 'icon',
+				short: 'I',
+				description: '文档图标（emoji 字符，如 🎯、📝、💡）',
+				type: 'string'
+			},
+			{
 				name: 'workspace',
 				short: 'w',
 				description: '工作区 ID（默认使用配置中的工作区）',
@@ -389,6 +402,7 @@ const docCommands: Record<string, CommandConfig> = {
 			title: parsed.title,
 			parent: parsed.parent,
 			folder: parsed.folder,
+			icon: parsed.icon,
 			workspace: parsed.workspace
 		})
 	},

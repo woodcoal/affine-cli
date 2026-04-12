@@ -13,7 +13,8 @@ import {
 	resolveInsertContext,
 	markdownOperationToAppendInput,
 	normalizeAppendBlockInput,
-	createBlock
+	createBlock,
+	setDocEmojiIcon
 } from '../utils/docsUtil.js';
 import { getWorkspaceTagOptions } from '../core/tags.js';
 import {
@@ -242,6 +243,7 @@ export async function docInfoHandler(params: {
  * @param params.content - 文档内容，支持 Markdown 格式（可选）
  * @param params.folder - 所属文件夹 ID（可选）
  * @param params.tags - 标签，多个用逗号分隔（可选）
+ * @param params.icon - 文档图标（emoji 字符）（可选）
  * @param params.workspace - 工作区 ID，默认使用配置中的工作区
  * @returns 包含创建结果的对象，包括文档 ID、标题、标签等
  *
@@ -255,30 +257,32 @@ export async function docCreateHandler(params: {
 	content?: string;
 	folder?: string;
 	tags?: string;
+	icon?: string;
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
 
 	let markdown = params.content || '';
 
+	// 只有明确提供了 title 才使用，否则让 createDocFromMarkdownCore 自动生成标题
+	const title = params.title;
+
 	const result = await createDocFromMarkdownCore({
 		workspaceId,
-		title: params.title,
+		title: title,
 		markdown,
 		tags: params.tags,
 		folder: params.folder
 	});
 
+	// 如果提供了 icon，设置文档图标
+	if (params.icon) {
+		await setDocEmojiIcon(workspaceId, result.docId, params.icon);
+	}
+
 	return {
 		success: true,
-		// workspaceId: result.workspaceId,
 		docId: result.docId
-		// title: result.title,
-		// tags: result.tags,
-		// linkedToParent: result.linkedToParent,
-		// warnings: result.warnings,
-		// lossy: result.lossy,
-		// stats: result.stats
 	};
 }
 
@@ -652,6 +656,7 @@ async function addDocToFolder(
  * @param params.title - 新标题（可选）
  * @param params.parent - 父文档 ID（可选，目前未实现）
  * @param params.folder - 文件夹 ID（可选）
+ * @param params.icon - 文档图标（emoji 字符）（可选）
  * @param params.workspace - 工作区 ID，默认使用配置中的工作区
  * @returns 包含更新结果的对象
  *
@@ -666,6 +671,7 @@ export async function docUpdateHandler(params: {
 	title?: string;
 	parent?: string;
 	folder?: string;
+	icon?: string;
 	workspace?: string;
 }): Promise<any> {
 	const workspaceId = getWorkspaceId(params.workspace);
@@ -675,6 +681,12 @@ export async function docUpdateHandler(params: {
 		await joinWorkspace(socket, workspaceId);
 
 		const results: string[] = [];
+
+		// 更新文档图标
+		if (params.icon) {
+			await setDocEmojiIcon(workspaceId, params.id, params.icon);
+			results.push('图标已更新');
+		}
 
 		// 更新文档标题
 		if (params.title) {

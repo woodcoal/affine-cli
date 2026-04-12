@@ -71,12 +71,12 @@ const journalCommands: Record<string, CommandConfig> = {
 
 	/**
 	 * create 命令：创建日记
-	 * 用法：create [--date <YYYY-MM-DD>] [--content <markdown|@file>] [--workspace <workspace-id>]
+	 * 用法：create [--date <YYYY-MM-DD>] [--content <markdown|@file>] [--icon <emoji>] [--workspace <workspace-id>]
 	 */
 	create: {
 		name: 'create',
 		description: '创建新日记（默认创建今天的日记）',
-		usage: 'create [--date <YYYY-MM-DD>] [--content <markdown|@file>] [--workspace <workspace-id>]',
+		usage: 'create [--date <YYYY-MM-DD>] [--content <markdown|@file>] [--icon <emoji>] [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'date',
@@ -91,6 +91,12 @@ const journalCommands: Record<string, CommandConfig> = {
 				type: 'string'
 			},
 			{
+				name: 'icon',
+				short: 'i',
+				description: '日记图标（emoji 字符，如 🎯、📝、💡）',
+				type: 'string'
+			},
+			{
 				name: 'workspace',
 				short: 'w',
 				description: '工作区 ID（默认使用配置中的工作区）',
@@ -101,6 +107,7 @@ const journalCommands: Record<string, CommandConfig> = {
 		paramsMapper: (parsed) => ({
 			date: parsed.date,
 			content: parseContentParam(parsed.content),
+			icon: parsed.icon,
 			workspace: parsed.workspace
 		})
 	},
@@ -186,12 +193,12 @@ const journalCommands: Record<string, CommandConfig> = {
 
 	/**
 	 * update 命令：更新日记内容（完整替换）
-	 * 用法：update --id <doc-id> [--content <markdown|@file>] [--workspace <workspace-id>]
+	 * 用法：update --id <doc-id> [--content <markdown|@file>] [--icon <emoji>] [--workspace <workspace-id>]
 	 */
 	update: {
 		name: 'update',
 		description: '完整更新日记内容（替换整个文档）',
-		usage: 'update --id <doc-id> [--date <YYYY-MM-DD>] [--content <markdown|@file>] [--workspace <workspace-id>]',
+		usage: 'update --id <doc-id> [--date <YYYY-MM-DD>] [--content <markdown|@file>] [--icon <emoji>] [--workspace <workspace-id>]',
 		args: [
 			{
 				name: 'id',
@@ -212,6 +219,12 @@ const journalCommands: Record<string, CommandConfig> = {
 				type: 'string'
 			},
 			{
+				name: 'icon',
+				short: 'I',
+				description: '日记图标（emoji 字符，如 🎯、📝、💡）',
+				type: 'string'
+			},
+			{
 				name: 'workspace',
 				short: 'w',
 				description: '工作区 ID（默认使用配置中的工作区）',
@@ -223,6 +236,7 @@ const journalCommands: Record<string, CommandConfig> = {
 			id: parsed.id,
 			date: parsed.date,
 			content: parseContentParam(parsed.content),
+			icon: parsed.icon,
 			workspace: parsed.workspace
 		})
 	}

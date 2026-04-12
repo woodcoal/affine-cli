@@ -2429,3 +2429,98 @@ export function collectDocForMarkdown(doc: Y.Doc) {
 	for (const [id] of blocks) visit(String(id));
 	return { title, rootBlockIds, blocksById };
 }
+
+/**
+ * 从文本开头提取 emoji 图标
+ * 使用与 Affine 相同的正则表达式匹配规则
+ *
+ * @param text - 输入文本
+ * @returns 包含提取的 emoji 和剩余文本的对象，或如果没有 emoji 则返回 null
+ */
+export function extractEmojiIcon(text: string): { emoji: string; rest: string } | null {
+	const emojiRe =
+		/(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/g;
+	emojiRe.lastIndex = 0;
+	const match = emojiRe.exec(text);
+	if (match && match.index === 0) {
+		const emojiEnd = nextGraphemeBreak(text, 0);
+		return {
+			emoji: text.slice(0, emojiEnd),
+			rest: text.slice(emojiEnd)
+		};
+	}
+	return null;
+}
+
+/**
+ * 简单的 grapheme break 实现（用于处理组合 emoji）
+ * 注意：这是一个简化版本，对于大多数用例应该足够
+ *
+ * @param text - 输入文本
+ * @param index - 起始位置
+ * @returns 下一个 grapheme break 的位置
+ */
+function nextGraphemeBreak(text: string, index: number): number {
+	if (index >= text.length) return text.length;
+	const char = text.charCodeAt(index);
+	// 检查是否是 Emoji 修饰符序列的一部分
+	if (char >= 0x1f3fb && char <= 0x1f3ff) return index + 1; // Emoji 修饰符
+	if (char >= 0x1f1e6 && char <= 0x1f1ff) {
+		// 旗子 emoji (regional indicator)
+		if (index + 1 < text.length && text.charCodeAt(index + 1) >= 0x1f1e6 && text.charCodeAt(index + 1) <= 0x1f1ff) {
+			return index + 2;
+		}
+	}
+	// 检查组合标记
+	if (char >= 0x300 && char <= 0x36f) return index + 1; // 组合标记
+	if (char >= 0xfe00 && char <= 0xfe0f) return index + 1; // 变体选择符
+	// 基本返回下一个字符（对于 BMP 字符）
+	if (char < 0xd800 || char > 0xdbff) return index + 1;
+	return index + 2;
+}
+
+/**
+ * 设置文档的 emoji 图标
+ * 通过更新 explorerIcon 数据库来实现
+ *
+ * @param workspaceId - 工作区 ID
+ * @param docId - 文档 ID
+ * @param emoji - emoji 字符
+ */
+export async function setDocEmojiIcon(workspaceId: string, docId: string, emoji: string): Promise<void> {
+	const socket = await createWorkspaceSocket();
+
+	try {
+		await joinWorkspace(socket, workspaceId);
+
+		const explorerIconDocId = 'db$explorerIcon';
+		const iconData = {
+			type: 'emoji',
+			unicode: emoji
+		};
+
+		const { doc: iconDoc, exists, prevSV } = await fetchYDoc(
+			socket,
+			workspaceId,
+			explorerIconDocId
+		);
+
+		const iconKey = `doc:${docId}`;
+
+		if (!exists) {
+			const newDoc = new Y.Doc();
+			const iconMap = newDoc.getMap(iconKey);
+			iconMap.set('id', iconKey);
+			iconMap.set('icon', iconData);
+
+			await updateYDoc(socket, workspaceId, explorerIconDocId, newDoc);
+		} else {
+			const iconMap = iconDoc.getMap(iconKey);
+			iconMap.set('id', iconKey);
+			iconMap.set('icon', iconData);
+
+			await updateYDoc(socket, workspaceId, explorerIconDocId, iconDoc, prevSV);
+		}
+	} finally {
+	}
+}
