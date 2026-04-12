@@ -26,8 +26,64 @@ import { parseMarkdownToOperations } from '../markdown/parse.js';
 import type { MarkdownOperation, TextDelta } from '../markdown/types.js';
 import { TAG_COLORS } from '../core/constants.js';
 import { generateId } from './misc.js';
-import { getWorkspaceTagOptions, WorkspaceTagOption, getStringArray } from '../core/tags.js';
+import { getWorkspaceTagOptions, WorkspaceTagOption } from '../core/tags.js';
+import { getWorkspaceId } from './config.js';
 
+export const APPEND_BLOCK_CANONICAL_TYPE_VALUES = [
+	'paragraph',
+	'heading',
+	'quote',
+	'list',
+	'code',
+	'divider',
+	'callout',
+	'latex',
+	'table',
+	'bookmark',
+	'image',
+	'attachment',
+	'embed_youtube',
+	'embed_github',
+	'embed_figma',
+	'embed_loom',
+	'embed_html',
+	'embed_linked_doc',
+	'embed_synced_doc',
+	'embed_iframe',
+	'database',
+	'data_view',
+	'surface_ref',
+	'frame',
+	'edgeless_text',
+	'note'
+] as const;
+export type AppendBlockCanonicalType = (typeof APPEND_BLOCK_CANONICAL_TYPE_VALUES)[number];
+
+export const APPEND_BLOCK_LEGACY_ALIAS_MAP = {
+	heading1: 'heading',
+	heading2: 'heading',
+	heading3: 'heading',
+	bulleted_list: 'list',
+	numbered_list: 'list',
+	todo: 'list'
+} as const;
+export type AppendBlockLegacyType = keyof typeof APPEND_BLOCK_LEGACY_ALIAS_MAP;
+
+export const APPEND_BLOCK_LIST_STYLE_VALUES = ['bulleted', 'numbered', 'todo'] as const;
+export type AppendBlockListStyle = (typeof APPEND_BLOCK_LIST_STYLE_VALUES)[number];
+
+export type AppendBlockBookmarkStyle = (typeof APPEND_BLOCK_BOOKMARK_STYLE_VALUES)[number];
+
+export const APPEND_BLOCK_DATA_VIEW_MODE_VALUES = ['table', 'kanban'] as const;
+export type AppendBlockDataViewMode = (typeof APPEND_BLOCK_DATA_VIEW_MODE_VALUES)[number];
+
+export const APPEND_BLOCK_BOOKMARK_STYLE_VALUES = [
+	'vertical',
+	'horizontal',
+	'list',
+	'cube',
+	'citation'
+] as const;
 /**
  * 获取 Block 版本号
  */
@@ -41,6 +97,100 @@ function blockVersion(flavour: string): number {
 			return 1;
 	}
 }
+
+export type AppendPlacement = {
+	parentId?: string;
+	afterBlockId?: string;
+	beforeBlockId?: string;
+	index?: number;
+};
+
+export type AppendBlockInput = {
+	workspaceId?: string;
+	docId: string;
+	type: string;
+	text?: string;
+	deltas?: TextDelta[];
+	url?: string;
+	pageId?: string;
+	iframeUrl?: string;
+	html?: string;
+	design?: string;
+	reference?: string;
+	refFlavour?: string;
+	width?: number;
+	height?: number;
+	background?: string;
+	sourceId?: string;
+	name?: string;
+	mimeType?: string;
+	size?: number;
+	embed?: boolean;
+	rows?: number;
+	columns?: number;
+	latex?: string;
+	checked?: boolean;
+	language?: string;
+	caption?: string;
+	level?: number;
+	style?: AppendBlockListStyle;
+	bookmarkStyle?: AppendBlockBookmarkStyle;
+	viewMode?: AppendBlockDataViewMode;
+	strict?: boolean;
+	placement?: AppendPlacement;
+	tableData?: string[][];
+	tableCellDeltas?: TextDelta[][][];
+};
+
+export type NormalizedAppendBlockInput = {
+	workspaceId?: string;
+	docId: string;
+	type: AppendBlockCanonicalType;
+	strict: boolean;
+	placement?: AppendPlacement;
+	text: string;
+	url: string;
+	pageId: string;
+	iframeUrl: string;
+	html: string;
+	design: string;
+	reference: string;
+	refFlavour: string;
+	width: number;
+	height: number;
+	background: string;
+	sourceId: string;
+	name: string;
+	mimeType: string;
+	size: number;
+	embed: boolean;
+	rows: number;
+	columns: number;
+	latex: string;
+	headingLevel: 1 | 2 | 3 | 4 | 5 | 6;
+	listStyle: AppendBlockListStyle;
+	bookmarkStyle: AppendBlockBookmarkStyle;
+	dataViewMode: AppendBlockDataViewMode;
+	checked: boolean;
+	language: string;
+	caption?: string;
+	legacyType?: AppendBlockLegacyType;
+	tableData?: string[][];
+	deltas?: TextDelta[];
+	tableCellDeltas?: TextDelta[][][];
+};
+
+export type CreateDocInput = {
+	workspaceId?: string;
+	title?: string;
+	content?: string;
+};
+
+export type CreateDocResult = {
+	workspaceId: string;
+	docId: string;
+	title: string;
+};
 
 /**
  * 设置 Block 的系统字段
@@ -180,242 +330,1340 @@ function mergeWarnings(...sources: string[][]): string[] {
 	return [...deduped];
 }
 
+export function createDatabaseViewColumn(
+	columnId: string,
+	width: number = 200,
+	hide: boolean = false
+): Y.Map<any> {
+	const column = new Y.Map<any>();
+	column.set('id', columnId);
+	column.set('width', width);
+	column.set('hide', hide);
+	return column;
+}
+
+export function createDatabaseColumnDefinition(input: {
+	id: string;
+	name: string;
+	type: string;
+	width?: number;
+	options?: string[];
+}): Y.Map<any> {
+	const column = new Y.Map<any>();
+	column.set('id', input.id);
+	column.set('name', input.name);
+	column.set('type', input.type);
+	column.set('width', input.width ?? 200);
+
+	if ((input.type === 'select' || input.type === 'multi-select') && input.options?.length) {
+		const data = new Y.Map<any>();
+		const options = new Y.Array<any>();
+		input.options.forEach((value, index) => {
+			const option = new Y.Map<any>();
+			option.set('id', generateId());
+			option.set('value', value);
+			option.set('color', TAG_COLORS[index % TAG_COLORS.length]);
+			options.push([option]);
+		});
+		data.set('options', options);
+		column.set('data', data);
+	}
+
+	return column;
+}
+export function createPresetBackedDataViewBlock(
+	blockId: string,
+	titleText: string,
+	viewMode: AppendBlockDataViewMode,
+	blockType: string
+): { blockId: string; block: Y.Map<any>; flavour: string; blockType: string } {
+	const block = new Y.Map<any>();
+	setSysFields(block, blockId, 'affine:database');
+	block.set('sys:parent', null);
+	block.set('sys:children', new Y.Array<string>());
+	block.set('prop:title', makeText(titleText));
+	block.set('prop:cells', new Y.Map<any>());
+	block.set('prop:comments', undefined);
+
+	const titleColumnId = generateId();
+	const columns = new Y.Array<any>();
+	columns.push([
+		createDatabaseColumnDefinition({
+			id: titleColumnId,
+			name: 'Title',
+			type: 'title',
+			width: 320
+		})
+	]);
+
+	const viewColumns = new Y.Array<any>();
+	viewColumns.push([createDatabaseViewColumn(titleColumnId, 320, false)]);
+	const header = {
+		titleColumn: titleColumnId,
+		iconColumn: 'type'
+	};
+
+	let groupBy: Record<string, string> | null = null;
+	let groupProperties: unknown[] | null = null;
+
+	if (viewMode === 'kanban') {
+		const statusColumnId = generateId();
+		columns.push([
+			createDatabaseColumnDefinition({
+				id: statusColumnId,
+				name: 'Status',
+				type: 'select',
+				options: ['Todo', 'In Progress', 'Done']
+			})
+		]);
+		viewColumns.push([createDatabaseViewColumn(statusColumnId, 200, false)]);
+		groupBy = {
+			columnId: statusColumnId,
+			name: 'select',
+			type: 'groupBy'
+		};
+		groupProperties = [];
+	}
+
+	const view = new Y.Map<any>();
+	view.set('id', generateId());
+	view.set('name', viewMode === 'kanban' ? 'Kanban View' : 'Table View');
+	view.set('mode', viewMode);
+	view.set('columns', viewColumns);
+	view.set('filter', { type: 'group', op: 'and', conditions: [] });
+	if (groupBy) {
+		view.set('groupBy', groupBy);
+	} else {
+		view.set('groupBy', null);
+	}
+	if (groupProperties) {
+		view.set('groupProperties', groupProperties);
+	}
+	view.set('sort', null);
+	view.set('header', header);
+
+	const views = new Y.Array<any>();
+	views.push([view]);
+
+	block.set('prop:columns', columns);
+	block.set('prop:views', views);
+
+	return {
+		blockId,
+		block,
+		flavour: 'affine:database',
+		blockType
+	};
+}
+
 /**
  * 创建 Block
  */
-function createBlock(type: string, text: string, extra?: Record<string, any>) {
-	const blockId = generateId(12, type);
-	const block = new Y.Map<any>();
 
-	switch (type) {
+export function createBlock(normalized: NormalizedAppendBlockInput): {
+	blockId: string;
+	block: Y.Map<any>;
+	flavour: string;
+	blockType?: string;
+	extraBlocks?: Array<{ blockId: string; block: Y.Map<any> }>;
+} {
+	const blockId = generateId();
+	const block = new Y.Map<any>();
+	const content = normalized.text;
+
+	switch (normalized.type) {
 		case 'paragraph':
-		case 'heading': {
-			setSysFields(block, blockId, 'affine:paragraph');
-			block.set('sys:parent', null);
-			block.set('sys:children', new Y.Array<string>());
-			const blockType = type === 'heading' ? 'h1' : 'text';
-			block.set('prop:type', extra?.level ? `h${extra.level}` : blockType);
-			block.set('prop:text', makeText(text));
-			break;
-		}
+		case 'heading':
 		case 'quote': {
 			setSysFields(block, blockId, 'affine:paragraph');
 			block.set('sys:parent', null);
 			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:type', 'quote');
-			block.set('prop:text', makeText(text));
-			break;
+			const blockType =
+				normalized.type === 'heading'
+					? (`h${normalized.headingLevel}` as const)
+					: normalized.type === 'quote'
+						? 'quote'
+						: 'text';
+			block.set('prop:type', blockType);
+			block.set('prop:text', makeText(content));
+			return { blockId, block, flavour: 'affine:paragraph', blockType };
 		}
 		case 'list': {
 			setSysFields(block, blockId, 'affine:list');
 			block.set('sys:parent', null);
 			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:type', extra?.style || 'bulleted');
-			block.set('prop:checked', extra?.checked || false);
-			block.set('prop:text', makeText(extra?.deltas || text));
-			break;
+			block.set('prop:type', normalized.listStyle);
+			block.set('prop:checked', normalized.listStyle === 'todo' ? normalized.checked : false);
+			block.set('prop:text', makeText(normalized.deltas ?? content));
+			return {
+				blockId,
+				block,
+				flavour: 'affine:list',
+				blockType: normalized.listStyle
+			};
 		}
 		case 'code': {
 			setSysFields(block, blockId, 'affine:code');
 			block.set('sys:parent', null);
 			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:language', extra?.language || 'txt');
-			block.set('prop:text', makeText(text));
-			break;
+			block.set('prop:language', normalized.language);
+			if (normalized.caption) {
+				block.set('prop:caption', normalized.caption);
+			}
+			block.set('prop:text', makeText(content));
+			return { blockId, block, flavour: 'affine:code' };
 		}
 		case 'divider': {
 			setSysFields(block, blockId, 'affine:divider');
 			block.set('sys:parent', null);
 			block.set('sys:children', new Y.Array<string>());
-			break;
+			return { blockId, block, flavour: 'affine:divider' };
 		}
 		case 'callout': {
 			setSysFields(block, blockId, 'affine:callout');
 			block.set('sys:parent', null);
 			const calloutChildren = new Y.Array<string>();
-			const textBlockId = generateId(12, 'paragraph');
+			const textBlockId = generateId();
 			const textBlock = new Y.Map<any>();
 			setSysFields(textBlock, textBlockId, 'affine:paragraph');
 			textBlock.set('sys:parent', null);
 			textBlock.set('sys:children', new Y.Array<string>());
 			textBlock.set('prop:type', 'text');
-			textBlock.set('prop:text', makeText(text));
+			textBlock.set('prop:text', makeText(content));
 			calloutChildren.push([textBlockId]);
 			block.set('sys:children', calloutChildren);
 			block.set('prop:icon', { type: 'emoji', unicode: '💡' });
 			block.set('prop:backgroundColorName', 'grey');
-			break;
+			return {
+				blockId,
+				block,
+				flavour: 'affine:callout',
+				extraBlocks: [{ blockId: textBlockId, block: textBlock }]
+			};
+		}
+		case 'latex': {
+			setSysFields(block, blockId, 'affine:latex');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:xywh', '[0,0,16,16]');
+			block.set('prop:index', 'a0');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:scale', 1);
+			block.set('prop:rotate', 0);
+			block.set('prop:latex', normalized.latex);
+			return { blockId, block, flavour: 'affine:latex' };
 		}
 		case 'table': {
 			setSysFields(block, blockId, 'affine:table');
 			block.set('sys:parent', null);
 			block.set('sys:children', new Y.Array<string>());
-			const rows = extra?.rows || 2;
-			const cols = extra?.columns || 2;
-			const tableData = extra?.tableData || [];
 
 			const rowIds: string[] = [];
-			for (let i = 0; i < rows; i++) {
-				const rowId = generateId(12, 'row');
+			const columnIds: string[] = [];
+			const tableData = normalized.tableData ?? [];
+
+			for (let i = 0; i < normalized.rows; i++) {
+				const rowId = generateId();
 				block.set(`prop:rows.${rowId}.rowId`, rowId);
 				block.set(`prop:rows.${rowId}.order`, `r${String(i).padStart(4, '0')}`);
 				rowIds.push(rowId);
 			}
-
-			const columnIds: string[] = [];
-			for (let i = 0; i < cols; i++) {
-				const columnId = generateId(12, 'col');
+			for (let i = 0; i < normalized.columns; i++) {
+				const columnId = generateId();
 				block.set(`prop:columns.${columnId}.columnId`, columnId);
 				block.set(`prop:columns.${columnId}.order`, `c${String(i).padStart(4, '0')}`);
 				columnIds.push(columnId);
 			}
-
 			for (let rowIndex = 0; rowIndex < rowIds.length; rowIndex += 1) {
 				const rowId = rowIds[rowIndex];
-				for (let colIndex = 0; colIndex < columnIds.length; colIndex += 1) {
-					const columnId = columnIds[colIndex];
-					const cellText = tableData[rowIndex]?.[colIndex] ?? '';
-					block.set(`prop:cells.${rowId}:${columnId}.text`, makeText(cellText));
+				const isHeader = rowIndex === 0;
+				for (let columnIndex = 0; columnIndex < columnIds.length; columnIndex += 1) {
+					const columnId = columnIds[columnIndex];
+					const cellText = tableData[rowIndex]?.[columnIndex] ?? '';
+					const cellDeltas = normalized.tableCellDeltas?.[rowIndex]?.[columnIndex] ?? [];
+					const cellYText = new Y.Text();
+					if (cellDeltas.length > 0) {
+						let offset = 0;
+						for (const delta of cellDeltas) {
+							if (!delta.insert) {
+								continue;
+							}
+							const attrs = isHeader
+								? { ...(delta.attributes ?? {}), bold: true }
+								: delta.attributes
+									? { ...delta.attributes }
+									: {};
+							cellYText.insert(offset, delta.insert, attrs);
+							offset += delta.insert.length;
+						}
+					} else if (isHeader && cellText) {
+						cellYText.insert(0, cellText, { bold: true });
+					} else {
+						cellYText.insert(0, cellText);
+					}
+					block.set(`prop:cells.${rowId}:${columnId}.text`, cellYText);
 				}
 			}
-			break;
+
+			block.set('prop:comments', undefined);
+			block.set('prop:textAlign', undefined);
+			return { blockId, block, flavour: 'affine:table' };
 		}
 		case 'bookmark': {
 			setSysFields(block, blockId, 'affine:bookmark');
 			block.set('sys:parent', null);
 			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:style', 'horizontal');
-			block.set('prop:url', extra?.url || '');
-			block.set('prop:caption', extra?.caption || null);
+			block.set('prop:style', normalized.bookmarkStyle);
+			block.set('prop:url', normalized.url);
+			block.set('prop:caption', normalized.caption ?? null);
 			block.set('prop:description', null);
 			block.set('prop:icon', null);
 			block.set('prop:image', null);
 			block.set('prop:title', null);
 			block.set('prop:xywh', '[0,0,0,0]');
 			block.set('prop:index', 'a0');
-			break;
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			block.set('prop:footnoteIdentifier', null);
+			return { blockId, block, flavour: 'affine:bookmark' };
 		}
-		default: {
-			setSysFields(block, blockId, 'affine:paragraph');
+		case 'image': {
+			setSysFields(block, blockId, 'affine:image');
 			block.set('sys:parent', null);
 			block.set('sys:children', new Y.Array<string>());
-			block.set('prop:type', 'text');
-			block.set('prop:text', makeText(text));
+			block.set('prop:caption', normalized.caption ?? '');
+			block.set('prop:sourceId', normalized.sourceId);
+			block.set('prop:width', 0);
+			block.set('prop:height', 0);
+			block.set('prop:size', normalized.size || -1);
+			block.set('prop:xywh', '[0,0,0,0]');
+			block.set('prop:index', 'a0');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			return { blockId, block, flavour: 'affine:image' };
+		}
+		case 'attachment': {
+			setSysFields(block, blockId, 'affine:attachment');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:name', normalized.name);
+			block.set('prop:size', normalized.size);
+			block.set('prop:type', normalized.mimeType);
+			block.set('prop:sourceId', normalized.sourceId);
+			block.set('prop:caption', normalized.caption ?? undefined);
+			block.set('prop:embed', normalized.embed);
+			block.set('prop:style', 'horizontalThin');
+			block.set('prop:index', 'a0');
+			block.set('prop:xywh', '[0,0,0,0]');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			block.set('prop:footnoteIdentifier', null);
+			return { blockId, block, flavour: 'affine:attachment' };
+		}
+		case 'embed_youtube': {
+			setSysFields(block, blockId, 'affine:embed-youtube');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:index', 'a0');
+			block.set('prop:xywh', '[0,0,0,0]');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			block.set('prop:style', 'video');
+			block.set('prop:url', normalized.url);
+			block.set('prop:caption', normalized.caption ?? null);
+			block.set('prop:image', null);
+			block.set('prop:title', null);
+			block.set('prop:description', null);
+			block.set('prop:creator', null);
+			block.set('prop:creatorUrl', null);
+			block.set('prop:creatorImage', null);
+			block.set('prop:videoId', null);
+			return { blockId, block, flavour: 'affine:embed-youtube' };
+		}
+		case 'embed_github': {
+			setSysFields(block, blockId, 'affine:embed-github');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:index', 'a0');
+			block.set('prop:xywh', '[0,0,0,0]');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			block.set('prop:style', 'horizontal');
+			block.set('prop:owner', '');
+			block.set('prop:repo', '');
+			block.set('prop:githubType', 'issue');
+			block.set('prop:githubId', '');
+			block.set('prop:url', normalized.url);
+			block.set('prop:caption', normalized.caption ?? null);
+			block.set('prop:image', null);
+			block.set('prop:status', null);
+			block.set('prop:statusReason', null);
+			block.set('prop:title', null);
+			block.set('prop:description', null);
+			block.set('prop:createdAt', null);
+			block.set('prop:assignees', null);
+			return { blockId, block, flavour: 'affine:embed-github' };
+		}
+		case 'embed_figma': {
+			setSysFields(block, blockId, 'affine:embed-figma');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:index', 'a0');
+			block.set('prop:xywh', '[0,0,0,0]');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			block.set('prop:style', 'figma');
+			block.set('prop:url', normalized.url);
+			block.set('prop:caption', normalized.caption ?? null);
+			block.set('prop:title', null);
+			block.set('prop:description', null);
+			return { blockId, block, flavour: 'affine:embed-figma' };
+		}
+		case 'embed_loom': {
+			setSysFields(block, blockId, 'affine:embed-loom');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:index', 'a0');
+			block.set('prop:xywh', '[0,0,0,0]');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			block.set('prop:style', 'video');
+			block.set('prop:url', normalized.url);
+			block.set('prop:caption', normalized.caption ?? null);
+			block.set('prop:image', null);
+			block.set('prop:title', null);
+			block.set('prop:description', null);
+			block.set('prop:videoId', null);
+			return { blockId, block, flavour: 'affine:embed-loom' };
+		}
+		case 'embed_html': {
+			setSysFields(block, blockId, 'affine:embed-html');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:index', 'a0');
+			block.set('prop:xywh', '[0,0,0,0]');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			block.set('prop:style', 'html');
+			block.set('prop:caption', normalized.caption ?? null);
+			block.set('prop:html', normalized.html || undefined);
+			block.set('prop:design', normalized.design || undefined);
+			return { blockId, block, flavour: 'affine:embed-html' };
+		}
+		case 'embed_linked_doc': {
+			setSysFields(block, blockId, 'affine:embed-linked-doc');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:index', 'a0');
+			block.set('prop:xywh', '[0,0,0,0]');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			block.set('prop:style', 'horizontal');
+			block.set('prop:caption', normalized.caption ?? null);
+			block.set('prop:pageId', normalized.pageId);
+			block.set('prop:title', undefined);
+			block.set('prop:description', undefined);
+			block.set('prop:footnoteIdentifier', null);
+			return { blockId, block, flavour: 'affine:embed-linked-doc' };
+		}
+		case 'embed_synced_doc': {
+			setSysFields(block, blockId, 'affine:embed-synced-doc');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:index', 'a0');
+			block.set('prop:xywh', '[0,0,800,100]');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:rotate', 0);
+			block.set('prop:style', 'syncedDoc');
+			block.set('prop:caption', normalized.caption ?? undefined);
+			block.set('prop:pageId', normalized.pageId);
+			block.set('prop:scale', undefined);
+			block.set('prop:preFoldHeight', undefined);
+			block.set('prop:title', undefined);
+			block.set('prop:description', undefined);
+			return { blockId, block, flavour: 'affine:embed-synced-doc' };
+		}
+		case 'embed_iframe': {
+			setSysFields(block, blockId, 'affine:embed-iframe');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:index', 'a0');
+			block.set('prop:xywh', '[0,0,0,0]');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:scale', 1);
+			block.set('prop:url', normalized.url);
+			block.set('prop:iframeUrl', normalized.iframeUrl || normalized.url);
+			block.set('prop:width', undefined);
+			block.set('prop:height', undefined);
+			block.set('prop:caption', normalized.caption ?? null);
+			block.set('prop:title', null);
+			block.set('prop:description', null);
+			return { blockId, block, flavour: 'affine:embed-iframe' };
+		}
+		case 'database': {
+			if (normalized.dataViewMode === 'kanban') {
+				return createPresetBackedDataViewBlock(
+					blockId,
+					normalized.text,
+					'kanban',
+					'database_kanban'
+				);
+			}
+			setSysFields(block, blockId, 'affine:database');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			const defaultView = new Y.Map<any>();
+			defaultView.set('id', generateId());
+			defaultView.set('name', 'Table View');
+			defaultView.set('mode', 'table');
+			defaultView.set('columns', new Y.Array<any>());
+			defaultView.set('filter', { type: 'group', op: 'and', conditions: [] });
+			defaultView.set('groupBy', null);
+			defaultView.set('sort', null);
+			defaultView.set('header', { titleColumn: null, iconColumn: null });
+			const views = new Y.Array<any>();
+			views.push([defaultView]);
+			block.set('prop:views', views);
+			block.set('prop:title', makeText(content));
+			block.set('prop:cells', new Y.Map<any>());
+			block.set('prop:columns', new Y.Array<any>());
+			block.set('prop:comments', undefined);
+			return { blockId, block, flavour: 'affine:database' };
+		}
+		case 'data_view': {
+			return createPresetBackedDataViewBlock(
+				blockId,
+				normalized.text,
+				normalized.dataViewMode,
+				`data_view_${normalized.dataViewMode}`
+			);
+		}
+		case 'surface_ref': {
+			setSysFields(block, blockId, 'affine:surface-ref');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:reference', normalized.reference);
+			block.set('prop:caption', normalized.caption ?? '');
+			block.set('prop:refFlavour', normalized.refFlavour);
+			block.set('prop:comments', undefined);
+			return { blockId, block, flavour: 'affine:surface-ref' };
+		}
+		case 'frame': {
+			setSysFields(block, blockId, 'affine:frame');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:title', makeText(content || 'Frame'));
+			block.set('prop:background', normalized.background);
+			block.set('prop:xywh', `[0,0,${normalized.width},${normalized.height}]`);
+			block.set('prop:index', 'a0');
+			block.set('prop:childElementIds', new Y.Map<any>());
+			block.set('prop:presentationIndex', 'a0');
+			block.set('prop:lockedBySelf', false);
+			return { blockId, block, flavour: 'affine:frame' };
+		}
+		case 'edgeless_text': {
+			setSysFields(block, blockId, 'affine:edgeless-text');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:xywh', `[0,0,${normalized.width},${normalized.height}]`);
+			block.set('prop:index', 'a0');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:scale', 1);
+			block.set('prop:rotate', 0);
+			block.set('prop:hasMaxWidth', false);
+			block.set('prop:comments', undefined);
+			block.set('prop:color', 'black');
+			block.set('prop:fontFamily', 'Inter');
+			block.set('prop:fontStyle', 'normal');
+			block.set('prop:fontWeight', 'regular');
+			block.set('prop:textAlign', 'left');
+			return { blockId, block, flavour: 'affine:edgeless-text' };
+		}
+		case 'note': {
+			setSysFields(block, blockId, 'affine:note');
+			block.set('sys:parent', null);
+			block.set('sys:children', new Y.Array<string>());
+			block.set('prop:xywh', `[0,0,${normalized.width},${normalized.height}]`);
+			block.set('prop:background', normalized.background);
+			block.set('prop:index', 'a0');
+			block.set('prop:lockedBySelf', false);
+			block.set('prop:hidden', false);
+			block.set('prop:displayMode', 'both');
+			const edgeless = new Y.Map<any>();
+			const style = new Y.Map<any>();
+			style.set('borderRadius', 8);
+			style.set('borderSize', 1);
+			style.set('borderStyle', 'solid');
+			style.set('shadowType', 'none');
+			edgeless.set('style', style);
+			block.set('prop:edgeless', edgeless);
+			block.set('prop:comments', undefined);
+			return { blockId, block, flavour: 'affine:note' };
 		}
 	}
-
-	return { blockId, block };
 }
 
 /**
  * 应用 Markdown 操作到文档
  */
-async function applyMarkdownOperationsInternal(
-	workspaceId: string,
-	docId: string,
-	operations: MarkdownOperation[]
-): Promise<{ appendedCount: number; skippedCount: number; blockIds: string[] }> {
+async function applyMarkdownOperationsInternal(parsed: {
+	workspaceId: string;
+	docId: string;
+	operations: MarkdownOperation[];
+	strict?: boolean;
+	placement?: AppendPlacement;
+	replaceExisting?: boolean;
+}): Promise<{ appendedCount: number; skippedCount: number; blockIds: string[] }> {
+	const strict = parsed.strict !== false;
+	const replaceExisting = parsed.replaceExisting !== false;
+
 	const socket = await createWorkspaceSocket();
 
 	try {
-		await joinWorkspace(socket, workspaceId);
+		await joinWorkspace(socket, parsed.workspaceId);
 		const doc = new Y.Doc();
-		const snapshot = await loadDoc(socket, workspaceId, docId);
-		if (!snapshot.missing) throw new Error(`Document ${docId} not found.`);
+		const snapshot = await loadDoc(socket, parsed.workspaceId, parsed.docId);
+		if (!snapshot.missing) throw new Error(`Document ${parsed.docId} not found.`);
 		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
 
 		const prevSV = Y.encodeStateVector(doc);
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
-		const noteId = ensureNoteBlock(blocks);
-		const noteBlock = findBlockById(blocks, noteId);
-		if (!noteBlock) throw new Error('Unable to resolve note block.');
-		const noteChildren = ensureChildrenArray(noteBlock);
-
-		// 清除现有内容
-		const descendantBlockIds = collectDescendantBlockIds(blocks, childIdsFrom(noteChildren));
-		for (const descendantId of descendantBlockIds) blocks.delete(descendantId);
-		if (noteChildren.length > 0) noteChildren.delete(0, noteChildren.length);
-
-		const blockIds: string[] = [];
+		let anchorPlacement: AppendPlacement | undefined = parsed.placement;
+		let lastInsertedBlockId: string | undefined;
+		let replaceParentId: string | undefined;
 		let skippedCount = 0;
-
-		for (const operation of operations) {
+		const blockIds: string[] = [];
+		if (replaceExisting) {
+			replaceParentId = ensureNoteBlock(blocks);
+			const noteBlock = findBlockById(blocks, replaceParentId);
+			if (!noteBlock) throw new Error('Unable to resolve note block.');
+			const noteChildren = ensureChildrenArray(noteBlock);
+			const descendantBlockIds = collectDescendantBlockIds(
+				blocks,
+				childIdsFrom(noteChildren)
+			);
+			for (const descendantId of descendantBlockIds) blocks.delete(descendantId);
+			if (noteChildren.length > 0) noteChildren.delete(0, noteChildren.length);
+		}
+		for (const operation of parsed.operations) {
+			const placement = lastInsertedBlockId
+				? { afterBlockId: lastInsertedBlockId }
+				: replaceParentId
+					? { parentId: replaceParentId }
+					: anchorPlacement;
+			const appendInput = markdownOperationToAppendInput(
+				operation,
+				parsed.docId,
+				parsed.workspaceId,
+				strict,
+				placement
+			);
 			try {
-				let type = operation.type;
-				let text = '';
-				let extra: Record<string, any> = {};
-
-				switch (operation.type) {
-					case 'heading':
-						type = 'heading';
-						text = operation.text;
-						extra = { level: operation.level };
-						break;
-					case 'paragraph':
-						type = 'paragraph';
-						text = operation.text;
-						break;
-					case 'quote':
-						type = 'quote';
-						text = operation.text;
-						break;
-					case 'callout':
-						type = 'callout';
-						text = operation.text;
-						break;
-					case 'list':
-						type = 'list';
-						text = operation.text;
-						extra = {
-							style: operation.style,
-							checked: operation.checked,
-							deltas: operation.deltas
-						};
-						break;
-					case 'code':
-						type = 'code';
-						text = operation.text;
-						extra = { language: operation.language };
-						break;
-					case 'divider':
-						type = 'divider';
-						text = '';
-						break;
-					case 'table':
-						type = 'table';
-						text = '';
-						extra = {
-							rows: operation.rows,
-							columns: operation.columns,
-							tableData: operation.tableData
-						};
-						break;
-					case 'bookmark':
-						type = 'bookmark';
-						text = '';
-						extra = { url: operation.url, caption: operation.caption };
-						break;
-					default:
-						type = 'paragraph';
-						text = '';
-				}
-
-				const { blockId, block } = createBlock(type, text, extra);
+				const normalized = normalizeAppendBlockInput(appendInput);
+				const context = resolveInsertContext(blocks, normalized);
+				const { blockId, block, extraBlocks } = createBlock(normalized);
 				blocks.set(blockId, block);
-				noteChildren.push([blockId]);
+				if (Array.isArray(extraBlocks))
+					for (const extra of extraBlocks) blocks.set(extra.blockId, extra.block);
+				if (context.insertIndex >= context.children.length)
+					context.children.push([blockId]);
+				else context.children.insert(context.insertIndex, [blockId]);
 				blockIds.push(blockId);
+				lastInsertedBlockId = blockId;
+				if (!replaceParentId) anchorPlacement = { afterBlockId: blockId };
 			} catch {
 				skippedCount += 1;
 			}
 		}
-
 		const delta = Y.encodeStateAsUpdate(doc, prevSV);
-		await pushDocUpdate(socket, workspaceId, docId, Buffer.from(delta).toString('base64'));
-
+		await pushDocUpdate(
+			socket,
+			parsed.workspaceId,
+			parsed.docId,
+			Buffer.from(delta).toString('base64')
+		);
 		return { appendedCount: blockIds.length, skippedCount, blockIds };
 	} finally {
 		socket.disconnect();
+	}
+}
+
+export function normalizeBlockTypeInput(typeInput: string): {
+	type: AppendBlockCanonicalType;
+	legacyType?: AppendBlockLegacyType;
+	headingLevelFromAlias?: 1 | 2 | 3;
+	listStyleFromAlias?: AppendBlockListStyle;
+} {
+	const key = typeInput.trim().toLowerCase();
+	if ((APPEND_BLOCK_CANONICAL_TYPE_VALUES as readonly string[]).includes(key)) {
+		return { type: key as AppendBlockCanonicalType };
+	}
+
+	if (Object.prototype.hasOwnProperty.call(APPEND_BLOCK_LEGACY_ALIAS_MAP, key)) {
+		const legacyType = key as AppendBlockLegacyType;
+		const type = APPEND_BLOCK_LEGACY_ALIAS_MAP[legacyType];
+		const listStyleFromAlias =
+			legacyType === 'bulleted_list'
+				? 'bulleted'
+				: legacyType === 'numbered_list'
+					? 'numbered'
+					: legacyType === 'todo'
+						? 'todo'
+						: undefined;
+		const headingLevelFromAlias =
+			legacyType === 'heading1'
+				? 1
+				: legacyType === 'heading2'
+					? 2
+					: legacyType === 'heading3'
+						? 3
+						: undefined;
+		return { type, legacyType, headingLevelFromAlias, listStyleFromAlias };
+	}
+
+	const supported = [
+		...APPEND_BLOCK_CANONICAL_TYPE_VALUES,
+		...Object.keys(APPEND_BLOCK_LEGACY_ALIAS_MAP)
+	].join(', ');
+	throw new Error(`Unsupported append_block type '${typeInput}'. Supported types: ${supported}`);
+}
+
+export function normalizePlacement(
+	placement: AppendPlacement | undefined
+): AppendPlacement | undefined {
+	if (!placement) return undefined;
+
+	const normalized: AppendPlacement = {};
+	if (placement.parentId?.trim()) normalized.parentId = placement.parentId.trim();
+	if (placement.afterBlockId?.trim()) normalized.afterBlockId = placement.afterBlockId.trim();
+	if (placement.beforeBlockId?.trim()) normalized.beforeBlockId = placement.beforeBlockId.trim();
+	if (placement.index !== undefined) normalized.index = placement.index;
+
+	const hasAfter = Boolean(normalized.afterBlockId);
+	const hasBefore = Boolean(normalized.beforeBlockId);
+	if (hasAfter && hasBefore) {
+		throw new Error(
+			'placement.afterBlockId and placement.beforeBlockId are mutually exclusive.'
+		);
+	}
+	if (normalized.index !== undefined) {
+		if (!Number.isInteger(normalized.index) || normalized.index < 0) {
+			throw new Error('placement.index must be an integer greater than or equal to 0.');
+		}
+		if (hasAfter || hasBefore) {
+			throw new Error(
+				'placement.index cannot be used with placement.afterBlockId/beforeBlockId.'
+			);
+		}
+	}
+
+	if (
+		!normalized.parentId &&
+		!normalized.afterBlockId &&
+		!normalized.beforeBlockId &&
+		normalized.index === undefined
+	) {
+		return undefined;
+	}
+	return normalized;
+}
+
+export function normalizeAppendBlockInput(parsed: AppendBlockInput): NormalizedAppendBlockInput {
+	const strict = parsed.strict !== false;
+	const typeInfo = normalizeBlockTypeInput(parsed.type);
+	const headingLevelCandidate = parsed.level ?? typeInfo.headingLevelFromAlias ?? 1;
+	const headingLevelNumber = Number(headingLevelCandidate);
+	const headingLevel = Math.max(1, Math.min(6, headingLevelNumber)) as 1 | 2 | 3 | 4 | 5 | 6;
+	const listStyle = typeInfo.listStyleFromAlias ?? parsed.style ?? 'bulleted';
+	const bookmarkStyle = parsed.bookmarkStyle ?? 'horizontal';
+	const dataViewMode = parsed.viewMode ?? (typeInfo.type === 'data_view' ? 'kanban' : 'table');
+	const language = (parsed.language ?? 'txt').trim().toLowerCase() || 'txt';
+	const placement = normalizePlacement(parsed.placement);
+	const url = (parsed.url ?? '').trim();
+	const pageId = (parsed.pageId ?? '').trim();
+	const iframeUrl = (parsed.iframeUrl ?? '').trim();
+	const html = parsed.html ?? '';
+	const design = parsed.design ?? '';
+	const reference = (parsed.reference ?? '').trim();
+	const refFlavour = (parsed.refFlavour ?? '').trim();
+	const width = Number.isFinite(parsed.width)
+		? Math.max(1, Math.floor(parsed.width as number))
+		: 100;
+	const height = Number.isFinite(parsed.height)
+		? Math.max(1, Math.floor(parsed.height as number))
+		: 100;
+	const background = (parsed.background ?? 'transparent').trim() || 'transparent';
+	const sourceId = (parsed.sourceId ?? '').trim();
+	const name = (parsed.name ?? 'attachment').trim() || 'attachment';
+	const mimeType =
+		(parsed.mimeType ?? 'application/octet-stream').trim() || 'application/octet-stream';
+	const size = Number.isFinite(parsed.size) ? Math.max(0, Math.floor(parsed.size as number)) : 0;
+	const rows = Number.isInteger(parsed.rows) ? (parsed.rows as number) : 3;
+	const columns = Number.isInteger(parsed.columns) ? (parsed.columns as number) : 3;
+	const latex = (parsed.latex ?? '').trim();
+	const tableData = Array.isArray(parsed.tableData) ? parsed.tableData : undefined;
+	const tableCellDeltas = Array.isArray(parsed.tableCellDeltas)
+		? parsed.tableCellDeltas
+		: undefined;
+
+	const normalized: NormalizedAppendBlockInput = {
+		workspaceId: parsed.workspaceId,
+		docId: parsed.docId,
+		type: typeInfo.type,
+		strict,
+		placement,
+		text: parsed.text ?? '',
+		url,
+		pageId,
+		iframeUrl,
+		html,
+		design,
+		reference,
+		refFlavour,
+		width,
+		height,
+		background,
+		sourceId,
+		name,
+		mimeType,
+		size,
+		embed: Boolean(parsed.embed),
+		rows,
+		columns,
+		latex,
+		headingLevel,
+		listStyle,
+		bookmarkStyle,
+		dataViewMode,
+		checked: Boolean(parsed.checked),
+		language,
+		caption: parsed.caption,
+		legacyType: typeInfo.legacyType,
+		tableData,
+		deltas: parsed.deltas,
+		tableCellDeltas
+	};
+
+	validateNormalizedAppendBlockInput(normalized, parsed);
+	return normalized;
+}
+
+export function findParentIdByChild(blocks: Y.Map<any>, childId: string): string | null {
+	for (const [id, value] of blocks) {
+		if (!(value instanceof Y.Map)) {
+			continue;
+		}
+		const childIds = childIdsFrom(value.get('sys:children'));
+		if (childIds.includes(childId)) {
+			return String(id);
+		}
+	}
+	return null;
+}
+
+export function resolveBlockParentId(blocks: Y.Map<any>, blockId: string): string | null {
+	const block = findBlockById(blocks, blockId);
+	if (!block) {
+		return null;
+	}
+	const rawParentId = block.get('sys:parent');
+	if (typeof rawParentId === 'string' && rawParentId.trim().length > 0) {
+		return rawParentId;
+	}
+	return findParentIdByChild(blocks, blockId);
+}
+
+export function ensureSurfaceBlock(blocks: Y.Map<any>): string {
+	const existingSurfaceId = findBlockIdByFlavour(blocks, 'affine:surface');
+	if (existingSurfaceId) {
+		return existingSurfaceId;
+	}
+
+	const pageId = findBlockIdByFlavour(blocks, 'affine:page');
+	if (!pageId) {
+		throw new Error('Document has no page block; unable to create/find surface.');
+	}
+
+	const surfaceId = generateId();
+	const surface = new Y.Map<any>();
+	setSysFields(surface, surfaceId, 'affine:surface');
+	surface.set('sys:parent', null);
+	surface.set('sys:children', new Y.Array<string>());
+	const elements = new Y.Map<any>();
+	elements.set('type', '$blocksuite:internal:native$');
+	elements.set('value', new Y.Map<any>());
+	surface.set('prop:elements', elements);
+	blocks.set(surfaceId, surface);
+
+	const page = blocks.get(pageId) as Y.Map<any>;
+	let pageChildren = page.get('sys:children') as Y.Array<string> | undefined;
+	if (!(pageChildren instanceof Y.Array)) {
+		pageChildren = new Y.Array<string>();
+		page.set('sys:children', pageChildren);
+	}
+	pageChildren.push([surfaceId]);
+	return surfaceId;
+}
+
+export function indexOfChild(children: Y.Array<any>, blockId: string): number {
+	let index = -1;
+	children.forEach((entry: unknown, i: number) => {
+		if (index >= 0) return;
+		if (typeof entry === 'string') {
+			if (entry === blockId) index = i;
+			return;
+		}
+		if (Array.isArray(entry)) {
+			for (const child of entry) {
+				if (child === blockId) {
+					index = i;
+					return;
+				}
+			}
+		}
+	});
+	return index;
+}
+
+export function resolveInsertContext(
+	blocks: Y.Map<any>,
+	normalized: NormalizedAppendBlockInput
+): {
+	parentId: string;
+	parentBlock: Y.Map<any>;
+	children: Y.Array<any>;
+	insertIndex: number;
+} {
+	const placement = normalized.placement;
+	let parentId: string | undefined;
+	let referenceBlockId: string | undefined;
+	let mode: 'append' | 'index' | 'after' | 'before' = 'append';
+
+	if (placement?.afterBlockId) {
+		mode = 'after';
+		referenceBlockId = placement.afterBlockId;
+		const referenceBlock = findBlockById(blocks, referenceBlockId);
+		if (!referenceBlock)
+			throw new Error(`placement.afterBlockId '${referenceBlockId}' was not found.`);
+		const refParentId = resolveBlockParentId(blocks, referenceBlockId);
+		if (!refParentId) {
+			throw new Error(`Block '${referenceBlockId}' has no parent.`);
+		}
+		parentId = refParentId;
+	} else if (placement?.beforeBlockId) {
+		mode = 'before';
+		referenceBlockId = placement.beforeBlockId;
+		const referenceBlock = findBlockById(blocks, referenceBlockId);
+		if (!referenceBlock)
+			throw new Error(`placement.beforeBlockId '${referenceBlockId}' was not found.`);
+		const refParentId = resolveBlockParentId(blocks, referenceBlockId);
+		if (!refParentId) {
+			throw new Error(`Block '${referenceBlockId}' has no parent.`);
+		}
+		parentId = refParentId;
+	} else if (placement?.parentId) {
+		mode = placement.index !== undefined ? 'index' : 'append';
+		parentId = placement.parentId;
+	}
+
+	if (!parentId) {
+		if (normalized.type === 'frame' || normalized.type === 'edgeless_text') {
+			parentId = ensureSurfaceBlock(blocks);
+		} else if (normalized.type === 'note') {
+			parentId = findBlockIdByFlavour(blocks, 'affine:page') || undefined;
+			if (!parentId) {
+				throw new Error('Document has no page block; unable to insert note.');
+			}
+		} else {
+			parentId = ensureNoteBlock(blocks);
+		}
+	}
+	const parentBlock = findBlockById(blocks, parentId);
+	if (!parentBlock) {
+		throw new Error(`Target parent block '${parentId}' was not found.`);
+	}
+	const parentFlavour = parentBlock.get('sys:flavour');
+	if (normalized.strict) {
+		if (parentFlavour === 'affine:page' && normalized.type !== 'note') {
+			throw new Error(`Cannot append '${normalized.type}' directly under 'affine:page'.`);
+		}
+		if (
+			parentFlavour === 'affine:surface' &&
+			normalized.type !== 'frame' &&
+			normalized.type !== 'edgeless_text'
+		) {
+			throw new Error(`Cannot append '${normalized.type}' directly under 'affine:surface'.`);
+		}
+		if (normalized.type === 'note' && parentFlavour !== 'affine:page') {
+			throw new Error('note blocks must be appended under affine:page.');
+		}
+		if (
+			(normalized.type === 'frame' || normalized.type === 'edgeless_text') &&
+			parentFlavour !== 'affine:surface'
+		) {
+			throw new Error(`${normalized.type} blocks must be appended under affine:surface.`);
+		}
+	}
+
+	const children = ensureChildrenArray(parentBlock);
+	let insertIndex = children.length;
+	if (mode === 'after' || mode === 'before') {
+		const idx = indexOfChild(children, referenceBlockId as string);
+		if (idx < 0) {
+			throw new Error(
+				`Reference block '${referenceBlockId}' is not a child of parent '${parentId}'.`
+			);
+		}
+		insertIndex = mode === 'after' ? idx + 1 : idx;
+	} else if (mode === 'index') {
+		const requestedIndex = placement?.index ?? children.length;
+		if (requestedIndex > children.length && normalized.strict) {
+			throw new Error(
+				`placement.index ${requestedIndex} is out of range (max ${children.length}).`
+			);
+		}
+		insertIndex = Math.min(requestedIndex, children.length);
+	}
+
+	return { parentId, parentBlock, children, insertIndex };
+}
+
+export function markdownOperationToAppendInput(
+	operation: MarkdownOperation,
+	docId: string,
+	workspaceId?: string,
+	strict: boolean = true,
+	placement?: AppendPlacement
+): AppendBlockInput {
+	switch (operation.type) {
+		case 'heading':
+			return {
+				workspaceId,
+				docId,
+				type: 'heading',
+				text: operation.text,
+				level: operation.level,
+				strict,
+				placement
+			};
+		case 'paragraph':
+			return {
+				workspaceId,
+				docId,
+				type: 'paragraph',
+				text: operation.text,
+				strict,
+				placement
+			};
+		case 'quote':
+			return {
+				workspaceId,
+				docId,
+				type: 'quote',
+				text: operation.text,
+				strict,
+				placement
+			};
+		case 'callout':
+			return {
+				workspaceId,
+				docId,
+				type: 'callout',
+				text: operation.text,
+				strict,
+				placement
+			};
+		case 'list':
+			return {
+				workspaceId,
+				docId,
+				type: 'list',
+				text: operation.text,
+				style: operation.style,
+				checked: operation.checked,
+				deltas: operation.deltas,
+				strict,
+				placement
+			};
+		case 'code':
+			return {
+				workspaceId,
+				docId,
+				type: 'code',
+				text: operation.text,
+				language: operation.language,
+				strict,
+				placement
+			};
+		case 'divider':
+			return { workspaceId, docId, type: 'divider', strict, placement };
+		case 'table':
+			return {
+				workspaceId,
+				docId,
+				type: 'table',
+				rows: operation.rows,
+				columns: operation.columns,
+				tableData: operation.tableData,
+				tableCellDeltas: operation.tableCellDeltas,
+				strict,
+				placement
+			};
+		case 'bookmark':
+			return {
+				workspaceId,
+				docId,
+				type: 'bookmark',
+				url: operation.url,
+				caption: operation.caption,
+				strict,
+				placement
+			};
+		default: {
+			const exhaustiveCheck: never = operation;
+			throw new Error(
+				`Unsupported markdown operation type: ${(exhaustiveCheck as any).type}`
+			);
+		}
+	}
+}
+
+export function validateNormalizedAppendBlockInput(
+	normalized: NormalizedAppendBlockInput,
+	raw: AppendBlockInput
+): void {
+	if (normalized.type === 'heading') {
+		if (
+			!Number.isInteger(normalized.headingLevel) ||
+			normalized.headingLevel < 1 ||
+			normalized.headingLevel > 6
+		) {
+			throw new Error('Heading level must be an integer from 1 to 6.');
+		}
+	} else if (raw.level !== undefined && normalized.strict) {
+		throw new Error("The 'level' field can only be used with type='heading'.");
+	}
+
+	if (normalized.type === 'list') {
+		if (!(APPEND_BLOCK_LIST_STYLE_VALUES as readonly string[]).includes(normalized.listStyle)) {
+			throw new Error(`Invalid list style '${normalized.listStyle}'.`);
+		}
+		if (normalized.listStyle !== 'todo' && raw.checked !== undefined && normalized.strict) {
+			throw new Error("The 'checked' field can only be used when list style is 'todo'.");
+		}
+	} else {
+		if (raw.style !== undefined && normalized.strict) {
+			throw new Error("The 'style' field can only be used with type='list'.");
+		}
+		if (raw.checked !== undefined && normalized.strict) {
+			throw new Error(
+				"The 'checked' field can only be used with type='list' (style='todo')."
+			);
+		}
+	}
+
+	if (normalized.type !== 'code') {
+		if (raw.language !== undefined && normalized.strict) {
+			throw new Error("The 'language' field can only be used with type='code'.");
+		}
+		const allowsCaption =
+			normalized.type === 'bookmark' ||
+			normalized.type === 'image' ||
+			normalized.type === 'attachment' ||
+			normalized.type === 'surface_ref' ||
+			normalized.type.startsWith('embed_');
+		if (raw.caption !== undefined && !allowsCaption && normalized.strict) {
+			throw new Error("The 'caption' field is not valid for this block type.");
+		}
+	} else if (normalized.language.length > 64) {
+		throw new Error('Code language is too long (max 64 chars).');
+	}
+
+	if (normalized.type === 'divider' && raw.text && raw.text.length > 0 && normalized.strict) {
+		throw new Error('Divider blocks do not accept text.');
+	}
+
+	const requiresUrl = [
+		'bookmark',
+		'embed_youtube',
+		'embed_github',
+		'embed_figma',
+		'embed_loom',
+		'embed_iframe'
+	] as const;
+	const urlAllowedTypes = [...requiresUrl] as readonly string[];
+	if (urlAllowedTypes.includes(normalized.type)) {
+		if (!normalized.url) {
+			throw new Error(`${normalized.type} blocks require a non-empty url.`);
+		}
+		try {
+			new URL(normalized.url);
+		} catch {
+			throw new Error(`Invalid url for ${normalized.type} block: '${normalized.url}'.`);
+		}
+	}
+
+	if (normalized.type === 'bookmark') {
+		if (
+			!(APPEND_BLOCK_BOOKMARK_STYLE_VALUES as readonly string[]).includes(
+				normalized.bookmarkStyle
+			)
+		) {
+			throw new Error(`Invalid bookmark style '${normalized.bookmarkStyle}'.`);
+		}
+	} else {
+		if (raw.bookmarkStyle !== undefined && normalized.strict) {
+			throw new Error("The 'bookmarkStyle' field can only be used with type='bookmark'.");
+		}
+		if (
+			raw.url !== undefined &&
+			!urlAllowedTypes.includes(normalized.type) &&
+			normalized.strict
+		) {
+			throw new Error("The 'url' field is not valid for this block type.");
+		}
+	}
+
+	if (normalized.type === 'image' || normalized.type === 'attachment') {
+		if (!normalized.sourceId) {
+			throw new Error(`${normalized.type} blocks require sourceId (use upload_blob first).`);
+		}
+		if (normalized.type === 'attachment' && (!normalized.name || !normalized.mimeType)) {
+			throw new Error('attachment blocks require valid name and mimeType.');
+		}
+	} else if (raw.sourceId !== undefined && normalized.strict) {
+		throw new Error(
+			"The 'sourceId' field can only be used with type='image' or type='attachment'."
+		);
+	} else if (
+		(raw.name !== undefined ||
+			raw.mimeType !== undefined ||
+			raw.embed !== undefined ||
+			raw.size !== undefined) &&
+		normalized.strict
+	) {
+		throw new Error(
+			"The 'name'/'mimeType'/'embed'/'size' fields are only valid for image/attachment blocks."
+		);
+	}
+
+	if (normalized.type === 'latex') {
+		if (!normalized.latex && normalized.strict) {
+			throw new Error("latex blocks require a non-empty 'latex' value in strict mode.");
+		}
+	} else if (raw.latex !== undefined && normalized.strict) {
+		throw new Error("The 'latex' field can only be used with type='latex'.");
+	}
+
+	if (normalized.type === 'embed_linked_doc' || normalized.type === 'embed_synced_doc') {
+		if (!normalized.pageId) {
+			throw new Error(`${normalized.type} blocks require pageId.`);
+		}
+	} else if (raw.pageId !== undefined && normalized.strict) {
+		throw new Error("The 'pageId' field can only be used with linked/synced doc embed types.");
+	}
+
+	if (normalized.type === 'embed_html') {
+		if (!normalized.html && !normalized.design && normalized.strict) {
+			throw new Error('embed_html blocks require html or design.');
+		}
+	} else if ((raw.html !== undefined || raw.design !== undefined) && normalized.strict) {
+		throw new Error("The 'html'/'design' fields can only be used with type='embed_html'.");
+	}
+
+	if (normalized.type === 'embed_iframe') {
+		if (raw.iframeUrl !== undefined && !normalized.iframeUrl && normalized.strict) {
+			throw new Error('embed_iframe iframeUrl cannot be empty when provided.');
+		}
+	} else if (raw.iframeUrl !== undefined && normalized.strict) {
+		throw new Error("The 'iframeUrl' field can only be used with type='embed_iframe'.");
+	}
+
+	if (normalized.type === 'surface_ref') {
+		if (!normalized.reference) {
+			throw new Error("surface_ref blocks require 'reference' (target element/block id).");
+		}
+		if (!normalized.refFlavour) {
+			throw new Error("surface_ref blocks require 'refFlavour' (for example affine:frame).");
+		}
+	} else if ((raw.reference !== undefined || raw.refFlavour !== undefined) && normalized.strict) {
+		throw new Error(
+			"The 'reference'/'refFlavour' fields can only be used with type='surface_ref'."
+		);
+	}
+
+	if (
+		normalized.type === 'frame' ||
+		normalized.type === 'edgeless_text' ||
+		normalized.type === 'note'
+	) {
+		if (
+			!Number.isInteger(normalized.width) ||
+			normalized.width < 1 ||
+			normalized.width > 10000
+		) {
+			throw new Error(`${normalized.type} width must be an integer between 1 and 10000.`);
+		}
+		if (
+			!Number.isInteger(normalized.height) ||
+			normalized.height < 1 ||
+			normalized.height > 10000
+		) {
+			throw new Error(`${normalized.type} height must be an integer between 1 and 10000.`);
+		}
+	} else if ((raw.width !== undefined || raw.height !== undefined) && normalized.strict) {
+		throw new Error("The 'width'/'height' fields are only valid for frame/edgeless_text/note.");
+	}
+
+	if (
+		normalized.type !== 'frame' &&
+		normalized.type !== 'note' &&
+		raw.background !== undefined &&
+		normalized.strict
+	) {
+		throw new Error("The 'background' field is only valid for frame/note.");
+	}
+
+	if (normalized.type === 'table') {
+		if (!Number.isInteger(normalized.rows) || normalized.rows < 1 || normalized.rows > 20) {
+			throw new Error('table rows must be an integer between 1 and 20.');
+		}
+		if (
+			!Number.isInteger(normalized.columns) ||
+			normalized.columns < 1 ||
+			normalized.columns > 20
+		) {
+			throw new Error('table columns must be an integer between 1 and 20.');
+		}
+		if (normalized.tableData) {
+			if (
+				!Array.isArray(normalized.tableData) ||
+				normalized.tableData.length !== normalized.rows
+			) {
+				throw new Error('tableData row count must match table rows.');
+			}
+			for (const row of normalized.tableData) {
+				if (!Array.isArray(row) || row.length !== normalized.columns) {
+					throw new Error('tableData column count must match table columns.');
+				}
+			}
+		}
+	} else if ((raw.rows !== undefined || raw.columns !== undefined) && normalized.strict) {
+		throw new Error("The 'rows'/'columns' fields can only be used with type='table'.");
+	} else if (raw.tableData !== undefined && normalized.strict) {
+		throw new Error("The 'tableData' field can only be used with type='table'.");
+	}
+
+	if (
+		normalized.type !== 'database' &&
+		normalized.type !== 'data_view' &&
+		raw.viewMode !== undefined &&
+		normalized.strict
+	) {
+		throw new Error(
+			"The 'viewMode' field can only be used with type='database' or type='data_view'."
+		);
 	}
 }
 
@@ -540,14 +1788,6 @@ async function createDocInternal(
 }
 
 /**
- * TAG_OPTION_COLORS: 标签颜色列表
- *
- * 复用 database.ts 中的 TAG_COLORS 颜色
- * 使用淡雅柔和的颜色方案，适合视觉展示
- */
-const TAG_OPTION_COLORS = TAG_COLORS;
-
-/**
  * 获取或创建 Tag 选项
  */
 async function ensureTagOption(wsDoc: Y.Doc, tagName: string): Promise<string> {
@@ -571,7 +1811,7 @@ async function ensureTagOption(wsDoc: Y.Doc, tagName: string): Promise<string> {
 
 	// 创建新 tag
 	const tagId = generateId(8, 'tag');
-	const color = TAG_OPTION_COLORS[(options?.length || 0) % TAG_OPTION_COLORS.length];
+	const color = TAG_COLORS[(options?.length || 0) % TAG_COLORS.length];
 	const now = Date.now();
 
 	// 确保 properties.tags.options 结构存在
@@ -675,6 +1915,58 @@ async function addDocToFolder(workspaceId: string, docId: string, folderId: stri
 	}
 }
 
+export async function appendBlockInternal(parsed: AppendBlockInput) {
+	const normalized = normalizeAppendBlockInput(parsed);
+	const workspaceId = getWorkspaceId(normalized.workspaceId);
+	if (!workspaceId) throw new Error('workspaceId is required');
+
+	const socket = await createWorkspaceSocket();
+	try {
+		await joinWorkspace(socket, workspaceId);
+
+		const doc = new Y.Doc();
+		const snapshot = await loadDoc(socket, workspaceId, normalized.docId);
+		if (snapshot.missing) {
+			Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
+		}
+
+		const prevSV = Y.encodeStateVector(doc);
+		const blocks = doc.getMap('blocks') as Y.Map<any>;
+		const context = resolveInsertContext(blocks, normalized);
+		const { blockId, block, flavour, blockType, extraBlocks } = createBlock(normalized);
+
+		blocks.set(blockId, block);
+		if (Array.isArray(extraBlocks)) {
+			for (const extra of extraBlocks) {
+				blocks.set(extra.blockId, extra.block);
+			}
+		}
+		if (context.insertIndex >= context.children.length) {
+			context.children.push([blockId]);
+		} else {
+			context.children.insert(context.insertIndex, [blockId]);
+		}
+
+		const delta = Y.encodeStateAsUpdate(doc, prevSV);
+		await pushDocUpdate(
+			socket,
+			workspaceId,
+			normalized.docId,
+			Buffer.from(delta).toString('base64')
+		);
+
+		return {
+			appended: true,
+			blockId,
+			flavour,
+			blockType,
+			normalizedType: normalized.type,
+			legacyType: normalized.legacyType || null
+		};
+	} finally {
+		socket.disconnect();
+	}
+}
 /**
  * 从 Markdown 创建文档（核心函数）
  */
@@ -701,45 +1993,8 @@ export async function createDocFromMarkdownCore(parsed: {
 	if (!title && operations.length > 0) {
 		const first = operations[0];
 		if (first.type === 'heading' && first.level === 1) {
-			title = first.text.trim() || 'Untitled';
+			title = first.text.trim();
 			operations = operations.slice(1);
-		}
-	}
-
-	// 如果仍未获取到标题，使用文档内容的前 N 个字符
-	if (!title) {
-		// 从原文提取前 N 个字符作为标题
-		const MAX_TITLE_LENGTH = 50;
-		const rawContent = parsed.markdown.trim();
-		if (rawContent) {
-			// 移除 Markdown 格式符号，获取纯文本
-			let plainText = rawContent
-				.replace(/^#+\s*/gm, '') // 移除标题标记
-				.replace(/\*\*([^*]+)\*\*/g, '$1') // 移除粗体
-				.replace(/\*([^*]+)\*/g, '$1') // 移除斜体
-				.replace(/`([^`]+)`/g, '$1') // 移除行内代码
-				.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // 移除链接
-				.replace(/^[-*+]\s+/gm, '') // 移除列表标记
-				.replace(/^\d+\.\s+/gm, '') // 移除有序列表标记
-				.replace(/^>\s+/gm, '') // 移除引用标记
-				.replace(/```[\s\S]*?```/g, '') // 移除代码块
-				.replace(/!\[.*?\]\(.*?\)/g, '') // 移除图片
-				.trim();
-
-			// 取前 N 个字符
-			if (plainText.length > MAX_TITLE_LENGTH) {
-				// 在单词边界或指定位置截断
-				const truncated = plainText.substring(0, MAX_TITLE_LENGTH);
-				// 尝试找到一个合适的断点（空格处）
-				const lastSpace = truncated.lastIndexOf(' ');
-				if (lastSpace > MAX_TITLE_LENGTH * 0.6) {
-					title = truncated.substring(0, lastSpace) + '...';
-				} else {
-					title = truncated + '...';
-				}
-			} else if (plainText.length > 0) {
-				title = plainText;
-			}
 		}
 	}
 
@@ -747,22 +2002,16 @@ export async function createDocFromMarkdownCore(parsed: {
 	if (!title) {
 		const now = new Date();
 		const pad = (n: number) => n.toString().padStart(2, '0');
-		title = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())} 无标题`;
+		title = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())} 新文档`;
 	}
 
 	// 解析标签
-	const tagNames: string[] = [];
-	if (parsed.tags) {
-		const tagsStr = parsed.tags.trim();
-		if (tagsStr) {
-			tagNames.push(
-				...tagsStr
-					.split(',')
-					.map((t) => t.trim())
-					.filter((t) => t)
-			);
-		}
-	}
+	const tagNames =
+		parsed.tags
+			?.trim()
+			.split(',')
+			.map((t) => t.trim())
+			.filter((t) => t) ?? [];
 
 	// 创建文档
 	const created = await createDocInternal(workspaceId, title);
@@ -844,68 +2093,25 @@ export async function createDocFromMarkdownCore(parsed: {
 	};
 
 	if (operations.length > 0) {
-		applied = await applyMarkdownOperationsInternal(
-			created.workspaceId,
-			created.docId,
-			operations
-		);
+		applied = await applyMarkdownOperationsInternal({
+			workspaceId: created.workspaceId,
+			docId: created.docId,
+			operations,
+			strict: parsed.strict
+		});
 	}
 
 	// 如果指定了父文档，添加链接
 	let linkedToParent = false;
 	if (parsed.parentDocId) {
 		try {
-			const socket = await createWorkspaceSocket();
-
-			try {
-				await joinWorkspace(socket, workspaceId);
-
-				const parentDoc = new Y.Doc();
-				const parentSnapshot = await loadDoc(socket, workspaceId, parsed.parentDocId);
-				if (parentSnapshot.missing) {
-					Y.applyUpdate(parentDoc, Buffer.from(parentSnapshot.missing, 'base64'));
-				}
-
-				const prevSV = Y.encodeStateVector(parentDoc);
-				const parentBlocks = parentDoc.getMap('blocks') as Y.Map<any>;
-
-				const noteId = ensureNoteBlock(parentBlocks);
-				const noteBlock = findBlockById(parentBlocks, noteId);
-				if (noteBlock) {
-					const noteChildren = ensureChildrenArray(noteBlock);
-
-					const embedId = generateId(12, 'embed');
-					const embedBlock = new Y.Map<any>();
-					setSysFields(embedBlock, embedId, 'affine:embed-linked-doc');
-					embedBlock.set('sys:parent', null);
-					embedBlock.set('sys:children', new Y.Array<string>());
-					embedBlock.set('prop:index', 'a0');
-					embedBlock.set('prop:xywh', '[0,0,0,0]');
-					embedBlock.set('prop:lockedBySelf', false);
-					embedBlock.set('prop:rotate', 0);
-					embedBlock.set('prop:style', 'horizontal');
-					embedBlock.set('prop:caption', null);
-					embedBlock.set('prop:pageId', created.docId);
-					embedBlock.set('prop:title', undefined);
-					embedBlock.set('prop:description', undefined);
-					embedBlock.set('prop:footnoteIdentifier', null);
-
-					parentBlocks.set(embedId, embedBlock);
-					noteChildren.push([embedId]);
-
-					const delta = Y.encodeStateAsUpdate(parentDoc, prevSV);
-					await pushDocUpdate(
-						socket,
-						workspaceId,
-						parsed.parentDocId,
-						Buffer.from(delta).toString('base64')
-					);
-
-					linkedToParent = true;
-				}
-			} finally {
-				socket.disconnect();
-			}
+			await appendBlockInternal({
+				workspaceId: created.workspaceId,
+				docId: parsed.parentDocId,
+				type: 'embed_linked_doc',
+				pageId: created.docId
+			});
+			linkedToParent = true;
 		} catch {
 			// Non-fatal
 		}
@@ -922,9 +2128,6 @@ export async function createDocFromMarkdownCore(parsed: {
 		applyWarnings.push(
 			`Doc created but could not be linked to parent doc "${parsed.parentDocId}". Link it manually.`
 		);
-	}
-	if (parsed.folder) {
-		// folder 警告将在外部处理
 	}
 
 	return {
@@ -950,22 +2153,22 @@ export async function createDocFromMarkdownCore(parsed: {
 
 // ==================== 工具函数 ====================
 
-/**
- * 获取标签数组（从 meta 中获取）
- */
-function getTagArray(meta: Y.Map<any>): string[] {
-	const pages = meta.get('pages') as Y.Array<any> | undefined;
-	if (!pages) return [];
-	for (const page of pages) {
-		if (page instanceof Y.Map) {
-			const tags = page.get('tags');
-			if (tags instanceof Y.Array) {
-				return tags.toArray() as string[];
-			}
-		}
-	}
-	return [];
-}
+// /**
+//  * 获取标签数组（从 meta 中获取）
+//  */
+// function getTagArray(meta: Y.Map<any>): string[] {
+// 	const pages = meta.get('pages') as Y.Array<any> | undefined;
+// 	if (!pages) return [];
+// 	for (const page of pages) {
+// 		if (page instanceof Y.Map) {
+// 			const tags = page.get('tags');
+// 			if (tags instanceof Y.Array) {
+// 				return tags.toArray() as string[];
+// 			}
+// 		}
+// 	}
+// 	return [];
+// }
 
 /**
  * 将文本内容转换为字符串
@@ -1240,17 +2443,7 @@ export interface MarkdownRenderableBlock {
  * 收集文档信息用于导出为 Markdown
  * 参考 .resources/core/docs/util.ts 中的 collectDocForMarkdown 实现
  */
-export function collectDocForMarkdown(
-	doc: Y.Doc,
-	tagOptionsById: Map<string, WorkspaceTagOption> = new Map()
-): {
-	title: string;
-	tags: string[];
-	rootBlockIds: string[];
-	blocksById: Map<string, MarkdownRenderableBlock>;
-} {
-	const meta = doc.getMap('meta');
-	const tags = resolveTagLabels(getStringArray(getTagArray(meta)), tagOptionsById);
+export function collectDocForMarkdown(doc: Y.Doc) {
 	const blocks = doc.getMap('blocks') as Y.Map<any>;
 	const pageId = findBlockIdByFlavour(blocks, 'affine:page');
 	const noteId = findBlockIdByFlavour(blocks, 'affine:note');
@@ -1295,5 +2488,5 @@ export function collectDocForMarkdown(
 	};
 	for (const rootId of rootBlockIds) visit(rootId);
 	for (const [id] of blocks) visit(String(id));
-	return { title, tags, rootBlockIds, blocksById };
+	return { title, rootBlockIds, blocksById };
 }

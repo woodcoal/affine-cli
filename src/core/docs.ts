@@ -190,30 +190,13 @@ export async function docInfoHandler(params: {
 	try {
 		await joinWorkspace(socket, workspaceId);
 
-		// 获取工作区的标签选项
-		const wsSnap = await loadDoc(socket, workspaceId, workspaceId);
-		const tagOptionsById = new Map<string, any>();
-
-		if (wsSnap.missing) {
-			const wsDoc = new Y.Doc();
-			Y.applyUpdate(wsDoc, Buffer.from(wsSnap.missing, 'base64'));
-			const wsMeta = wsDoc.getMap('meta');
-			const tagOptions = getWorkspaceTagOptions(wsMeta);
-			for (const opt of tagOptions) {
-				tagOptionsById.set(opt.id, opt);
-			}
-		}
-
 		// 加载文档内容
 		const snap = await loadDoc(socket, workspaceId, params.id);
-
 		if (snap.missing) {
-			const doc2 = new Y.Doc();
-			Y.applyUpdate(doc2, Buffer.from(snap.missing, 'base64'));
+			const doc = new Y.Doc();
+			Y.applyUpdate(doc, Buffer.from(snap.missing, 'base64'));
 
-			console.log('================================', doc2);
-
-			const collected = collectDocForMarkdown(doc2, tagOptionsById);
+			const collected = collectDocForMarkdown(doc);
 
 			if (contentMode === 'raw') {
 				// raw 模式：输出原始 blocks 数据
@@ -280,14 +263,14 @@ export async function docCreateHandler(params: {
 
 	return {
 		success: true,
-		workspaceId: result.workspaceId,
-		docId: result.docId,
-		title: result.title,
-		tags: result.tags,
-		linkedToParent: result.linkedToParent,
-		warnings: result.warnings,
-		lossy: result.lossy,
-		stats: result.stats
+		// workspaceId: result.workspaceId,
+		docId: result.docId
+		// title: result.title,
+		// tags: result.tags,
+		// linkedToParent: result.linkedToParent,
+		// warnings: result.warnings,
+		// lossy: result.lossy,
+		// stats: result.stats
 	};
 }
 
