@@ -171,7 +171,6 @@ export async function folderAllHandler(params: { workspace?: string }): Promise<
 
 		return folders;
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -229,7 +228,6 @@ export async function folderListHandler(params: {
 			};
 		});
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -291,7 +289,6 @@ export async function folderCreateHandler(params: {
 			index: nextIndex
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -341,7 +338,6 @@ export async function folderDeleteHandler(params: {
 			message: `文件夹 ${params.id} 已删除`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -407,7 +403,6 @@ export async function folderAddHandler(params: {
 			index: nextIndex
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -476,7 +471,6 @@ export async function folderMoveHandler(params: {
 			message: `文档 ${params.target} 已移动到文件夹 ${params.id}`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -533,7 +527,6 @@ export async function folderRemoveHandler(params: {
 			message: `文档 ${params.id} 已从文件夹 ${params.folder} 移除`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -601,7 +594,6 @@ export async function folderUpdateHandler(params: {
 			message: `文件夹 ${params.id} 已更新`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -692,6 +684,5 @@ export async function folderClearHandler(params: { workspace?: string }): Promis
 			folers: deletedFolders
 		};
 	} finally {
-		socket.disconnect();
 	}
 }

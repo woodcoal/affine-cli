@@ -268,10 +268,16 @@ export async function runCli(args: string[]): Promise<boolean> {
 const rawArgs = process.argv.slice(2);
 const cliArgs = rawArgs[0] === '--' ? rawArgs.slice(1) : rawArgs;
 
+import { closeWorkspaceSocket } from './utils/wsClient.js';
+
 runCli(cliArgs)
-	.then((success) => process.exit(success ? 0 : 1))
+	.then((success) => {
+		closeWorkspaceSocket();
+		process.exit(success ? 0 : 1);
+	})
 	.catch((err) => {
 		console.error(`致命错误: ${err.message}`);
+		closeWorkspaceSocket();
 		process.exit(1);
 	});
 

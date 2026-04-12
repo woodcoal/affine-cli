@@ -985,7 +985,6 @@ async function applyMarkdownOperationsInternal(parsed: {
 		);
 		return { appendedCount: blockIds.length, skippedCount, blockIds };
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -1783,7 +1782,6 @@ async function createDocInternal(
 
 		return { workspaceId, docId, title: docTitle };
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -1911,7 +1909,6 @@ async function addDocToFolder(workspaceId: string, docId: string, folderId: stri
 			Buffer.from(update).toString('base64')
 		);
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -1964,7 +1961,6 @@ export async function appendBlockInternal(parsed: AppendBlockInput) {
 			legacyType: normalized.legacyType || null
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 /**
@@ -2072,7 +2068,6 @@ export async function createDocFromMarkdownCore(parsed: {
 				Buffer.from(delta).toString('base64')
 			);
 		} finally {
-			socket.disconnect();
 		}
 	}
 

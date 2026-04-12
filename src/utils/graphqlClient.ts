@@ -118,11 +118,19 @@ export class GraphQLClient {
 	}
 }
 
+let cachedClient: GraphQLClient | null = null;
+
+export function clearGraphQLClientCache() {
+	cachedClient = null;
+}
+
 /**
  * 创建 GraphQL 客户端实例
  * @returns GraphQL 客户端
  */
 export async function createGraphQLClient(): Promise<GraphQLClient> {
+	if (cachedClient) return cachedClient;
+
 	const config = loadConfig();
 	const apiToken = config.apiToken;
 
@@ -136,5 +144,6 @@ export async function createGraphQLClient(): Promise<GraphQLClient> {
 		);
 	}
 
+	cachedClient = gql;
 	return gql;
 }

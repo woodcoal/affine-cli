@@ -1036,7 +1036,6 @@ async function loadDatabaseDocContext(
 	const doc = new Y.Doc();
 	const snapshot = await loadDoc(socket, workspaceId, docId);
 	if (!snapshot.missing) {
-		socket.disconnect();
 		throw new Error('Document not found');
 	}
 	Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
@@ -1044,17 +1043,14 @@ async function loadDatabaseDocContext(
 	const blocks = doc.getMap('blocks') as Y.Map<any>;
 	const dbBlock = findBlockById(blocks, databaseBlockId);
 	if (!dbBlock) {
-		socket.disconnect();
 		throw new Error(`Database block '${databaseBlockId}' not found`);
 	}
 	const dbFlavour = dbBlock.get('sys:flavour');
 	if (dbFlavour !== 'affine:database') {
-		socket.disconnect();
 		throw new Error(`Block '${databaseBlockId}' is not a database (flavour: ${dbFlavour})`);
 	}
 	const cellsMap = dbBlock.get('prop:cells') as Y.Map<any>;
 	if (!(cellsMap instanceof Y.Map)) {
-		socket.disconnect();
 		throw new Error('Database block has no cells map');
 	}
 	const lookup = buildDatabaseColumnLookup(readColumnDefs(dbBlock));
@@ -1469,7 +1465,6 @@ export function findRowsByFilters(
 // 			linkedDocId: params.linkedDocId || null
 // 		};
 // 	} finally {
-// 		ctx.socket.disconnect();
 // 	}
 // }
 
@@ -1538,7 +1533,6 @@ export function findRowsByFilters(
 // 			databaseBlockId: params.databaseBlockId
 // 		};
 // 	} finally {
-// 		ctx.socket.disconnect();
 // 	}
 // }
 
@@ -1671,7 +1665,6 @@ export async function removeDatabaseRowHandler(params: {
 			databaseBlockId: params.databaseBlockId
 		};
 	} finally {
-		ctx.socket.disconnect();
 	}
 }
 
@@ -1782,7 +1775,6 @@ export async function queryDatabaseHandler(params: {
 		// 默认 rows 格式
 		return readDatabaseCellsHandler(params);
 	} finally {
-		ctx.socket.disconnect();
 	}
 }
 
@@ -1877,7 +1869,6 @@ export async function readDatabaseCellsHandler(params: {
 
 		return { rows };
 	} finally {
-		ctx.socket.disconnect();
 	}
 }
 
@@ -1939,7 +1930,6 @@ export async function readDatabaseColumnsHandler(params: {
 			views: readDatabaseViewDefs(ctx.dbBlock, ctx)
 		};
 	} finally {
-		ctx.socket.disconnect();
 	}
 }
 
@@ -2099,7 +2089,6 @@ export async function updateDatabaseRowHandler(params: {
 			databaseBlockId: params.databaseBlockId
 		};
 	} finally {
-		ctx.socket.disconnect();
 	}
 }
 
@@ -2178,7 +2167,6 @@ export async function listDatabasesHandler(params: {
 
 		return { databases };
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -2772,7 +2760,6 @@ export async function createDatabaseHandler(params: {
 			importedRows
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -2887,7 +2874,6 @@ export async function deleteDatabaseHandler(params: {
 			databaseBlockId: params.databaseBlockId
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -3122,6 +3108,5 @@ export async function insertDatabaseHandler(params: {
 			newColumns: inferredColumns.length
 		};
 	} finally {
-		socket.disconnect();
 	}
 }

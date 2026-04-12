@@ -29,6 +29,19 @@ const DEFAULT_WS_CLIENT_VERSION = '0.26.0';
 const WS_CONNECT_TIMEOUT_MS = 10000;
 const WS_ACK_TIMEOUT_MS = 10000;
 
+let _sharedSocket: Socket | null = null;
+let _sharedSocketPromise: Promise<Socket> | null = null;
+const _joinedWorkspaces = new Set<string>();
+
+export function closeWorkspaceSocket() {
+	if (_sharedSocket) {
+		_sharedSocket.disconnect();
+		_sharedSocket = null;
+	}
+	_sharedSocketPromise = null;
+	_joinedWorkspaces.clear();
+}
+
 /**
  * wsUrlFromGraphQLEndpoint: 从 GraphQL 端点 URL 推导 WebSocket URL
  *
@@ -62,6 +75,13 @@ export function wsUrlFromGraphQLEndpoint(endpoint: string): string {
  * - 支持自定义认证头
  */
 export async function createWorkspaceSocket(): Promise<Socket> {
+	if (_sharedSocket && _sharedSocket.connected) {
+		return _sharedSocket;
+	}
+	if (_sharedSocketPromise) {
+		return _sharedSocketPromise;
+	}
+
 	const { apiUrl, apiToken } = getApiConfig();
 
 	const extraHeaders: Record<string, string> = {};
@@ -76,7 +96,7 @@ export async function createWorkspaceSocket(): Promise<Socket> {
 		timeout: WS_CONNECT_TIMEOUT_MS
 	});
 
-	return new Promise((resolve, reject) => {
+	_sharedSocketPromise = new Promise((resolve, reject) => {
 		const onConnect = () => {
 			socket.off('connect_error', onError);
 			resolve(socket);
@@ -85,6 +105,7 @@ export async function createWorkspaceSocket(): Promise<Socket> {
 		const onError = (err: any) => {
 			socket.off('connect', onConnect);
 			socket.disconnect();
+			_sharedSocketPromise = null;
 			reject(err);
 		};
 
@@ -98,10 +119,18 @@ export async function createWorkspaceSocket(): Promise<Socket> {
 				socket.off('connect', onConnect);
 				socket.off('connect_error', onError);
 				socket.disconnect();
+				_sharedSocketPromise = null;
 				reject(new Error(`WebSocket 连接超时 (${WS_CONNECT_TIMEOUT_MS}ms)`));
 			}
 		}, WS_CONNECT_TIMEOUT_MS + 1000);
 	});
+
+	try {
+		_sharedSocket = await _sharedSocketPromise;
+		return _sharedSocket;
+	} catch (err) {
+		throw err;
+	}
 }
 
 /**
@@ -113,6 +142,7 @@ export async function createWorkspaceSocket(): Promise<Socket> {
  * @throws 加入工作区超时
  */
 export async function joinWorkspace(socket: Socket, workspaceId: string) {
+	if (_joinedWorkspaces.has(workspaceId)) return;
 	try {
 		const ack = await socket.timeout(WS_ACK_TIMEOUT_MS).emitWithAck('space:join', {
 			spaceType: 'workspace',
@@ -123,6 +153,7 @@ export async function joinWorkspace(socket: Socket, workspaceId: string) {
 		if (ack?.error) {
 			throw new Error(ack.error.message || '加入工作区失败');
 		}
+		_joinedWorkspaces.add(workspaceId);
 	} catch (err: any) {
 		if (err.message?.includes('timeout')) {
 			throw new Error(`加入工作区超时 (${WS_ACK_TIMEOUT_MS}ms)`);
@@ -324,6 +355,5 @@ export async function getWorkspaceDocs(workspaceId: string) {
 		}
 		return pagesInfo;
 	} finally {
-		socket.disconnect();
 	}
 }

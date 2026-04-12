@@ -138,7 +138,6 @@ export async function collectionListHandler(params: { workspace?: string }): Pro
 				docCount: col.allowList.length
 			}));
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -195,7 +194,6 @@ export async function collectionInfoHandler(params: {
 			docCount: collection.allowList.length
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -259,7 +257,6 @@ export async function collectionCreateHandler(params: {
 			name: collection.name
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -329,7 +326,6 @@ export async function collectionUpdateHandler(params: {
 			message: `精选已重命名为 "${params.name}"`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -384,7 +380,6 @@ export async function collectionDeleteHandler(params: {
 			message: `精选 ${params.id} 已删除`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -454,7 +449,6 @@ export async function collectionAddHandler(params: {
 			message: `文档 ${params.target} 已添加到精选 ${params.id}`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -523,6 +517,5 @@ export async function collectionRemoveHandler(params: {
 			message: `文档 ${params.target} 已从精选 ${params.id} 移除`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }

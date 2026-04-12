@@ -367,7 +367,6 @@ async function addCommentMarkToDocument(
 			await pushDocUpdate(socket, workspaceId, docId, Buffer.from(update).toString('base64'));
 		}
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -710,7 +709,6 @@ async function removeCommentMarkFromDocument(
 			await pushDocUpdate(socket, workspaceId, docId, Buffer.from(update).toString('base64'));
 		}
 	} finally {
-		socket.disconnect();
 	}
 }
 

@@ -215,7 +215,6 @@ export async function docInfoHandler(params: {
 			}
 		}
 	} finally {
-		socket.disconnect();
 	}
 
 	return result;
@@ -334,7 +333,6 @@ export async function docDeleteHandler(params: { id: string; workspace?: string 
 			message: `文档 ${params.id} 已删除`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -481,7 +479,6 @@ export async function docCopyHandler(params: {
 			title: newTitle
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -831,7 +828,6 @@ export async function docUpdateHandler(params: {
 			message: results.length > 0 ? results.join(', ') : '无更新内容'
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -1036,7 +1032,6 @@ export async function docSearchHandler(params: {
 			documents: results
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -1224,7 +1219,6 @@ export async function docReplaceHandler(params: {
 			preview: params.preview || false
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -1365,7 +1359,6 @@ export async function docAppendHandler(params: {
 			}
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 

@@ -172,6 +172,12 @@ function env(name: string, file: Record<string, string>, fallback?: string): str
 	return process.env[name] || file[name] || fallback;
 }
 
+let cachedConfig: { baseUrl: string; apiToken?: string; defaultWorkspaceId?: string } | null = null;
+
+export function clearConfigCache() {
+	cachedConfig = null;
+}
+
 /**
  * loadConfig: 加载完整配置
  *
@@ -182,16 +188,19 @@ function env(name: string, file: Record<string, string>, fallback?: string): str
  * - 其他配置项无默认值，从环境变量或配置文件读取
  */
 export function loadConfig() {
+	if (cachedConfig) return cachedConfig;
+
 	const file = loadConfigFile();
 	const baseUrl = validateBaseUrl(env('AFFINE_BASE_URL', file, 'https://app.affine.pro')!);
 	const apiToken = env('AFFINE_API_TOKEN', file);
 	const defaultWorkspaceId = env('AFFINE_WORKSPACE_ID', file);
 
-	return {
+	cachedConfig = {
 		baseUrl,
 		apiToken,
 		defaultWorkspaceId
 	};
+	return cachedConfig;
 }
 
 /**

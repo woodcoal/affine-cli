@@ -242,7 +242,6 @@ export async function tagsListHandler(params: { workspace?: string }): Promise<a
 			tags
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -325,7 +324,6 @@ export async function tagsCreateHandler(params: {
 			// created: true
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -418,7 +416,6 @@ export async function tagsDocAddHandler(params: {
 			message: `标签 "${tag}" 已添加到文档 ${params.id}`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -495,7 +492,6 @@ export async function tagsDocRemoveHandler(params: {
 			message: `标签 "${tag}" 已从文档 ${params.id} 移除`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -567,7 +563,6 @@ export async function tagsDeleteHandler(params: { tag: string; workspace?: strin
 			message: `标签 "${tag}" 已删除`
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
 
@@ -644,6 +639,5 @@ export async function tagsDocListHandler(params: {
 			docs
 		};
 	} finally {
-		socket.disconnect();
 	}
 }
