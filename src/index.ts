@@ -33,6 +33,7 @@ import { runCollectionCommands } from './cli/collection.js';
 import { runFileCommands } from './cli/file.js';
 import { runCommentCommands } from './cli/comments.js';
 import { runDatabaseCommands } from './cli/database.js';
+import { runJournalCommands } from './cli/journal.js';
 
 /**
  * CLI_MODULES: CLI 模块注册表
@@ -86,6 +87,11 @@ const CLI_MODULES: Record<string, CliModule> = {
 		name: 'database',
 		description: '数据库管理（在文档中添加、管理数据表）',
 		actions: runDatabaseCommands
+	},
+	journal: {
+		name: 'journal',
+		description: '日记管理（创建、列出、追加日记）',
+		actions: runJournalCommands
 	}
 };
 
@@ -142,6 +148,9 @@ function printMainHelp() {
 	lines.push('  affine-cli database import --doc-id <id> --db-id <db-id> --json @data.json');
 	lines.push('  affine-cli database export --doc-id <id> --db-id <db-id>');
 	lines.push('  affine-cli database delete --doc-id <id> --db-id <db-id>');
+	lines.push('  affine-cli journal list');
+	lines.push('  affine-cli journal create --date "2024-01-15" --content "./content.md"');
+	lines.push('  affine-cli journal append --date "2024-01-15" --content "今日总结..."');
 
 	console.log(lines.join('\n'));
 }

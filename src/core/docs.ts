@@ -1243,7 +1243,8 @@ export async function docAppendHandler(params: {
 		// 解析 Markdown 并转换为 blocks
 		let appendedCount = 0;
 		for (const operation of operations) {
-			const input = markdownOperationToAppendInput(operation, params.id, workspaceId);
+			// 关键：strict: false 跳过 URL 验证
+			const input = markdownOperationToAppendInput(operation, params.id, workspaceId, false);
 			const normalized = normalizeAppendBlockInput(input);
 			const result = createBlock(normalized);
 			blocks.set(result.blockId, result.block);
