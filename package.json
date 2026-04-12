@@ -1,6 +1,6 @@
 {
 	"name": "affine-cli",
-	"version": "1.26.412",
+	"version": "1.26.413",
 	"description": "Affine CLI is a lightweight command-line tool for managing Affine documents, tags, folders, collections, files, comments, and databases. ",
 	"author": "木炭 <woodcoal@qq.com>",
 	"license": "MIT",
