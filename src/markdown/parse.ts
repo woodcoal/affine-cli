@@ -73,27 +73,6 @@ function findMatchingToken(
 	return -1;
 }
 
-function findMatchingInline(
-	tokens: TokenLike[],
-	start: number,
-	openType: string,
-	closeType: string
-): number {
-	let depth = 0;
-	for (let i = start; i < tokens.length; i += 1) {
-		const token = tokens[i];
-		if (token.type === openType) {
-			depth += 1;
-		} else if (token.type === closeType) {
-			depth -= 1;
-			if (depth === 0) {
-				return i;
-			}
-		}
-	}
-	return -1;
-}
-
 function deltaToString(deltas: TextDelta[]): string {
 	return deltas.map((delta) => delta.insert).join('');
 }
@@ -134,7 +113,7 @@ function renderInline(children: TokenLike[]): TextDelta[] {
 					break;
 				}
 				case 'link_open': {
-					const close = findMatchingInline(children, i, 'link_open', 'link_close');
+					const close = findMatchingToken(children, i, 'link_open', 'link_close');
 					if (close < 0) {
 						break;
 					}
@@ -149,7 +128,7 @@ function renderInline(children: TokenLike[]): TextDelta[] {
 					break;
 				}
 				case 'strong_open': {
-					const close = findMatchingInline(children, i, 'strong_open', 'strong_close');
+					const close = findMatchingToken(children, i, 'strong_open', 'strong_close');
 					if (close < 0) {
 						break;
 					}
@@ -158,7 +137,7 @@ function renderInline(children: TokenLike[]): TextDelta[] {
 					break;
 				}
 				case 'em_open': {
-					const close = findMatchingInline(children, i, 'em_open', 'em_close');
+					const close = findMatchingToken(children, i, 'em_open', 'em_close');
 					if (close < 0) {
 						break;
 					}
@@ -167,7 +146,7 @@ function renderInline(children: TokenLike[]): TextDelta[] {
 					break;
 				}
 				case 's_open': {
-					const close = findMatchingInline(children, i, 's_open', 's_close');
+					const close = findMatchingToken(children, i, 's_open', 's_close');
 					if (close < 0) {
 						break;
 					}

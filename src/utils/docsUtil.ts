@@ -21,7 +21,7 @@
  */
 
 import * as Y from 'yjs';
-import { createWorkspaceSocket, joinWorkspace, loadDoc, fetchYDoc, updateYDoc } from './wsClient.js';
+import { createWorkspaceSocket, joinWorkspace, fetchYDoc, updateYDoc } from './wsClient.js';
 import { parseMarkdownToOperations } from '../markdown/parse.js';
 import type { MarkdownOperation, TextDelta } from '../markdown/types.js';
 import { TAG_COLORS } from '../core/constants.js';
@@ -921,12 +921,9 @@ async function applyMarkdownOperationsInternal(parsed: {
 
 	try {
 		await joinWorkspace(socket, parsed.workspaceId);
-		const doc = new Y.Doc();
-		const snapshot = await loadDoc(socket, parsed.workspaceId, parsed.docId);
-		if (!snapshot.missing) throw new Error(`Document ${parsed.docId} not found.`);
-		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
+		const { doc, exists, prevSV } = await fetchYDoc(socket, parsed.workspaceId, parsed.docId);
+		if (!exists) throw new Error(`Document ${parsed.docId} not found.`);
 
-		const prevSV = Y.encodeStateVector(doc);
 		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
 		let anchorPlacement: AppendPlacement | undefined = parsed.placement;
@@ -1746,10 +1743,7 @@ async function createDocInternal(
 		await updateYDoc(socket, workspaceId, docId, ydoc);
 
 		// 更新工作区元数据
-		const wsDoc = new Y.Doc();
-		const snapshot = await loadDoc(socket, workspaceId, workspaceId);
-		if (snapshot.missing) Y.applyUpdate(wsDoc, Buffer.from(snapshot.missing, 'base64'));
-		const prevSV = Y.encodeStateVector(wsDoc);
+		const { doc: wsDoc, prevSV } = await fetchYDoc(socket, workspaceId, workspaceId);
 		const wsMeta = wsDoc.getMap('meta');
 
 		let pages = wsMeta.get('pages') as Y.Array<Y.Map<any>> | undefined;
@@ -1838,14 +1832,7 @@ async function addDocToFolder(workspaceId: string, docId: string, folderId: stri
 
 		// folders 存储在特殊文档中
 		const foldersDocId = `db$${workspaceId}$folders`;
-		const foldersDoc = new Y.Doc();
-		const foldersSnapshot = await loadDoc(socket, workspaceId, foldersDocId);
-
-		// 只有当 snapshot 存在时才应用更新
-		const hasSnapshot = Boolean(foldersSnapshot.missing);
-		if (hasSnapshot) {
-			Y.applyUpdate(foldersDoc, Buffer.from(foldersSnapshot.missing!, 'base64'));
-		}
+		const { doc: foldersDoc, exists: hasSnapshot } = await fetchYDoc(socket, workspaceId, foldersDocId);
 
 		// 收集现有节点
 		const nodes: any[] = [];
