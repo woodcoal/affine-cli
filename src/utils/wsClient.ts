@@ -373,7 +373,7 @@ export async function fetchYDoc(
 ): Promise<{ doc: Y.Doc; exists: boolean; prevSV: Uint8Array }> {
 	const snapshot = await loadDoc(socket, workspaceId, docId);
 	const doc = new Y.Doc();
-	const exists = !snapshot.missing;
+	const exists = !!snapshot.missing;
 	if (snapshot.missing) {
 		Y.applyUpdate(doc, Buffer.from(snapshot.missing, 'base64'));
 	}
@@ -420,4 +420,3 @@ export async function updateYDoc(
 export function getSpecialWorkspaceDocId(workspaceId: string, tableName: string): string {
 	return `db$${workspaceId}$${tableName}`;
 }
-
