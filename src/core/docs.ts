@@ -5,7 +5,16 @@
 
 import { createGraphQLClient } from '../utils/graphqlClient.js';
 import { getWorkspaceId, getBaseUrl } from '../utils/config.js';
-import { createDocFromMarkdownCore, collectDocForMarkdown, findBlockById, ensureNoteBlock, ensureChildrenArray, markdownOperationToAppendInput, normalizeAppendBlockInput, createBlock } from '../utils/docsUtil.js';
+import {
+	createDocFromMarkdownCore,
+	collectDocForMarkdown,
+	findBlockById,
+	ensureNoteBlock,
+	resolveInsertContext,
+	markdownOperationToAppendInput,
+	normalizeAppendBlockInput,
+	createBlock
+} from '../utils/docsUtil.js';
 import { getWorkspaceTagOptions } from '../core/tags.js';
 import {
 	getWorkspaceDocs,
@@ -381,7 +390,11 @@ export async function docCopyHandler(params: {
 			sourceFolderId = await getDocFolderId(socket, workspaceId, params.id);
 		}
 
-		const { doc: sourceDoc, exists: sourceSnapshotExists } = await fetchYDoc(socket, workspaceId, params.id);
+		const { doc: sourceDoc, exists: sourceSnapshotExists } = await fetchYDoc(
+			socket,
+			workspaceId,
+			params.id
+		);
 		if (!sourceSnapshotExists) {
 			throw new Error('源文档不存在');
 		}
@@ -889,7 +902,11 @@ export async function docSearchHandler(params: {
 		await joinWorkspace(socket, workspaceId);
 
 		// 获取工作区元数据
-		const { doc: wsDoc, exists: wsSnapExists } = await fetchYDoc(socket, workspaceId, workspaceId);
+		const { doc: wsDoc, exists: wsSnapExists } = await fetchYDoc(
+			socket,
+			workspaceId,
+			workspaceId
+		);
 		if (!wsSnapExists) {
 			return {
 				totalCount: 0,
@@ -1011,7 +1028,11 @@ export async function docReplaceHandler(params: {
 		await joinWorkspace(socket, workspaceId);
 
 		// 加载文档
-		const { doc: doc, exists: snapExists, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, params.id);
+		const {
+			doc: doc,
+			exists: snapExists,
+			prevSV: prevSV
+		} = await fetchYDoc(socket, workspaceId, params.id);
 		if (!snapExists) {
 			throw new Error(`文档 ${params.id} 不存在`);
 		}
@@ -1210,27 +1231,27 @@ export async function docAppendHandler(params: {
 	try {
 		await joinWorkspace(socket, workspaceId);
 
-		// 解析 Markdown
+		// 加载文档
+		const {
+			doc: doc,
+			exists: snapExists,
+			prevSV: prevSV
+		} = await fetchYDoc(socket, workspaceId, params.id);
+		if (!snapExists) {
+			throw new Error(`文档 ${params.id} 不存在`);
+		}
+
+		const blocks = doc.getMap('blocks');
+
 		const parsedMarkdown = parseMarkdownToOperations(content);
 		const operations = parsedMarkdown.operations;
 
 		if (operations.length === 0) {
 			return {
 				success: true,
-				message: '无有效内容可追加',
-				stats: {
-					parsedBlocks: 0,
-					appendedBlocks: 0
-				}
+				message: '无有效内容可追加'
 			};
 		}
-
-		// 加载文档
-		const { doc: doc, exists: snapExists, prevSV: prevSV } = await fetchYDoc(socket, workspaceId, params.id);
-		if (!snapExists) {
-			throw new Error(`文档 ${params.id} 不存在`);
-		}
-		const blocks = doc.getMap('blocks') as Y.Map<any>;
 
 		// 找到或创建 note block
 		const noteId = ensureNoteBlock(blocks);
@@ -1238,86 +1259,51 @@ export async function docAppendHandler(params: {
 		if (!noteBlock) {
 			throw new Error('无法解析 note block');
 		}
-		const noteChildren = ensureChildrenArray(noteBlock);
-
-		// 解析 Markdown 并转换为 blocks
+		// 使用与 createDocFromMarkdownCore 相同的处理方式
+		let lastInsertedBlockId: string | undefined;
 		let appendedCount = 0;
+
 		for (const operation of operations) {
-			// 关键：strict: false 跳过 URL 验证
-			const input = markdownOperationToAppendInput(operation, params.id, workspaceId, false);
-			const normalized = normalizeAppendBlockInput(input);
-			const result = createBlock(normalized);
-			blocks.set(result.blockId, result.block);
-			// 处理额外的 blocks（如 callout 内部的 text block）
-			if (result.extraBlocks) {
-				for (const extra of result.extraBlocks) {
-					blocks.set(extra.blockId, extra.block);
+			const placement = lastInsertedBlockId
+				? { afterBlockId: lastInsertedBlockId }
+				: { parentId: noteId };
+
+			// strict: false 跳过 URL 验证
+			const input = markdownOperationToAppendInput(
+				operation,
+				params.id,
+				workspaceId,
+				false,
+				placement
+			);
+			try {
+				const normalized = normalizeAppendBlockInput(input);
+				const context = resolveInsertContext(blocks, normalized);
+				const { blockId, block, extraBlocks } = createBlock(normalized);
+				blocks.set(blockId, block);
+				if (Array.isArray(extraBlocks)) {
+					for (const extra of extraBlocks) blocks.set(extra.blockId, extra.block);
 				}
+				if (context.insertIndex >= context.children.length) {
+					context.children.push([blockId]);
+				} else {
+					context.children.insert(context.insertIndex, [blockId]);
+				}
+				lastInsertedBlockId = blockId;
+			} catch {
+				// 跳过验证失败的 blocks
 			}
-			// 添加到 note block 的子元素
-			noteChildren.push([result.blockId]);
 			appendedCount++;
 		}
 
-		// 推送更新
 		await updateYDoc(socket, workspaceId, params.id, doc, prevSV);
-
 		return {
 			success: true,
-			message: `已追加 ${appendedCount} 个内容块到文档 ${params.id}`,
-			stats: {
-				parsedBlocks: operations.length,
-				appendedBlocks: appendedCount,
-				warnings: parsedMarkdown.warnings
-			}
+			message: `已追加 ${appendedCount} 个内容块到文档 ${params.id}`
 		};
 	} finally {
 	}
 }
-
-// /**
-//  * getLastTextBlockId: 获取最后一个文本类型的 block ID
-//  *
-//  * 功能描述：
-//  * - 从 note block 的子元素中查找最后一个文本类型的 block
-//  * - 文本类型包括：affine:paragraph、affine:list、affine:code
-//  * - 用于确定追加内容的位置
-//  *
-//  * @param children - note block 的子元素数组
-//  * @param blocks - 文档的所有 blocks 映射
-//  * @returns 最后一个文本类型 block 的 ID，若不存在则返回 undefined
-//  */
-// function getLastTextBlockId(children: Y.Array<any>, blocks: Y.Map<any>): string | undefined {
-// 	const childIds = childIdsFromArray(children);
-// 	for (let i = childIds.length - 1; i >= 0; i--) {
-// 		const block = blocks.get(childIds[i]);
-// 		if (block instanceof Y.Map) {
-// 			const flavour = block.get('sys:flavour');
-// 			if (['affine:paragraph', 'affine:list', 'affine:code'].includes(flavour)) {
-// 				return childIds[i];
-// 			}
-// 		}
-// 	}
-// 	return undefined;
-// }
-
-// /**
-//  * childIdsFromArray: 从 Y.Array 中提取 ID 列表
-//  *
-//  * @param arr - Y.Array 对象
-//  * @returns ID 字符串数组
-//  */
-// function childIdsFromArray(arr: Y.Array<any>): string[] {
-// 	const ids: string[] = [];
-// 	arr.forEach((item: any) => {
-// 		if (typeof item === 'string') {
-// 			ids.push(item);
-// 		} else if (Array.isArray(item)) {
-// 			ids.push(...item.filter((i: any) => typeof i === 'string'));
-// 		}
-// 	});
-// 	return ids;
-// }
 
 /**
  * docPublishHandler: 发布文档（公开访问）
